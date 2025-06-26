@@ -1,8 +1,9 @@
+<<<<<<< HEAD
 # ?? Citaly - Sistema de Gestión de Citas Médicas
 
 Sistema integral de gestión de citas médicas con dashboard administrativo, desarrollado con React/TypeScript (frontend) y Node.js/Express (backend).
 
-## ?? Características Principales
+## ?? Ca? **¡Dale una estrella si este proyecto te fue útil!** ?erísticas Principales
 
 - ? **Dashboard en Tiempo Real** - Visualización de estadísticas y métricas
 - ? **Gestión de Citas** - Programación, confirmación y seguimiento
@@ -225,3 +226,6 @@ Si encuentras algún problema o tienes preguntas:
 ---
 
 ? **¡Dale una estrella si este proyecto te fue útil!** ?
+=======
+# Citaly
+>>>>>>> 01e59ff0baa956870ef17b3a387cf57560d0fbf7
