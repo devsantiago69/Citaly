@@ -86,14 +86,14 @@ app.get('/api/services', (req, res) => {
     origin: req.get('origin'),
     headers: req.headers
   });
-  
+
   const query = `
-    SELECT s.*, sc.name as category 
-    FROM services s 
-    LEFT JOIN service_categories sc ON s.category_id = sc.id 
+    SELECT s.*, sc.name as category
+    FROM services s
+    LEFT JOIN service_categories sc ON s.category_id = sc.id
     WHERE s.company_id = 1
   `;
-  
+
   db.query(query, (err, results) => {
     if (err) {
       logger.error('Error fetching services:', err);
@@ -214,11 +214,11 @@ app.get('/api/clients', (req, res) => {
 // GET staff
 app.get('/api/staff', (req, res) => {
   const query = `
-    SELECT 
-      u.id, 
-      u.name, 
-      u.email, 
-      u.phone, 
+    SELECT
+      u.id,
+      u.name,
+      u.email,
+      u.phone,
       u.role,
       u.active,
       (SELECT COUNT(*) FROM appointments WHERE staff_id = u.id) as appointments
@@ -236,7 +236,7 @@ app.post('/api/staff', (req, res) => {
   }
 
   const query = `
-    INSERT INTO users (company_id, name, email, phone, role, active) 
+    INSERT INTO users (company_id, name, email, phone, role, active)
     VALUES (1, ?, ?, ?, ?, 1)
   `;
   db.query(query, [name, email, phone, role], (err, results) => {
@@ -266,14 +266,14 @@ app.post('/api/staff', (req, res) => {
 // GET admins
 app.get('/api/admins', (req, res) => {
   const query = `
-    SELECT 
-      id, 
-      name, 
-      email, 
+    SELECT
+      id,
+      name,
+      email,
       role,
       created_at as createdAt,
       '' as lastLogin
-    FROM users 
+    FROM users
     WHERE role = 'admin' AND company_id = 1
   `;
   handleQuery(res, query);
@@ -285,7 +285,7 @@ app.get('/api/admins', (req, res) => {
 app.get('/api/user-types', (req, res) => {
   const { company_id = 1 } = req.query;
   const query = `
-    SELECT 
+    SELECT
       ut.id,
       ut.company_id,
       ut.name,
@@ -301,22 +301,22 @@ app.get('/api/user-types', (req, res) => {
     WHERE ut.company_id = ? AND ut.active = 1
     ORDER BY ut.level, ut.name
   `;
-  
+
   db.execute(query, [company_id], (err, results) => {
     if (err) {
       logger.error('Error fetching user types:', err);
       res.status(500).json({ error: 'Error fetching user types' });
       return;
     }
-    
+
     // Parse JSON permissions
     const userTypes = results.map(userType => ({
       ...userType,
-      permissions: typeof userType.permissions === 'string' 
-        ? JSON.parse(userType.permissions) 
+      permissions: typeof userType.permissions === 'string'
+        ? JSON.parse(userType.permissions)
         : userType.permissions
     }));
-    
+
     res.json(userTypes);
   });
 });
@@ -325,7 +325,7 @@ app.get('/api/user-types', (req, res) => {
 app.get('/api/user-types/:id', (req, res) => {
   const { id } = req.params;
   const query = `
-    SELECT 
+    SELECT
       ut.id,
       ut.company_id,
       ut.name,
@@ -340,56 +340,56 @@ app.get('/api/user-types/:id', (req, res) => {
     LEFT JOIN users u ON ut.created_by = u.id
     WHERE ut.id = ?
   `;
-  
+
   db.execute(query, [id], (err, results) => {
     if (err) {
       logger.error('Error fetching user type:', err);
       res.status(500).json({ error: 'Error fetching user type' });
       return;
     }
-    
+
     if (results.length === 0) {
       res.status(404).json({ error: 'User type not found' });
       return;
     }
-    
+
     const userType = {
       ...results[0],
-      permissions: typeof results[0].permissions === 'string' 
-        ? JSON.parse(results[0].permissions) 
+      permissions: typeof results[0].permissions === 'string'
+        ? JSON.parse(results[0].permissions)
         : results[0].permissions
     };
-    
+
     res.json(userType);
   });
 });
 
 // POST create new user type
 app.post('/api/user-types', (req, res) => {
-  const { 
-    company_id = 1, 
-    name, 
-    description, 
-    permissions = {}, 
-    level, 
-    created_by = 1 
+  const {
+    company_id = 1,
+    name,
+    description,
+    permissions = {},
+    level,
+    created_by = 1
   } = req.body;
-  
+
   if (!name || !level) {
     return res.status(400).json({ error: 'Name and level are required' });
   }
-  
+
   if (!['admin', 'staff', 'client'].includes(level)) {
     return res.status(400).json({ error: 'Level must be admin, staff, or client' });
   }
-  
+
   const query = `
     INSERT INTO user_types (company_id, name, description, permissions, level, created_by)
     VALUES (?, ?, ?, ?, ?, ?)
   `;
-  
+
   const permissionsJson = JSON.stringify(permissions);
-  
+
   db.execute(query, [company_id, name, description, permissionsJson, level, created_by], (err, results) => {
     if (err) {
       logger.error('Error creating user type:', err);
@@ -400,7 +400,7 @@ app.post('/api/user-types', (req, res) => {
       }
       return;
     }
-    
+
     const newUserType = {
       id: results.insertId,
       company_id,
@@ -411,7 +411,7 @@ app.post('/api/user-types', (req, res) => {
       active: true,
       createdAt: new Date().toISOString()
     };
-    
+
     logger.info('User type created:', { id: results.insertId, name, level });
     res.status(201).json(newUserType);
   });
@@ -421,24 +421,24 @@ app.post('/api/user-types', (req, res) => {
 app.put('/api/user-types/:id', (req, res) => {
   const { id } = req.params;
   const { name, description, permissions, level, active } = req.body;
-  
+
   if (!name || !level) {
     return res.status(400).json({ error: 'Name and level are required' });
   }
-  
+
   if (!['admin', 'staff', 'client'].includes(level)) {
     return res.status(400).json({ error: 'Level must be admin, staff, or client' });
   }
-  
+
   const query = `
-    UPDATE user_types 
+    UPDATE user_types
     SET name = ?, description = ?, permissions = ?, level = ?, active = ?, updated_at = CURRENT_TIMESTAMP
     WHERE id = ?
   `;
-  
+
   const permissionsJson = JSON.stringify(permissions || {});
   const isActive = active !== undefined ? active : true;
-  
+
   db.execute(query, [name, description, permissionsJson, level, isActive, id], (err, results) => {
     if (err) {
       logger.error('Error updating user type:', err);
@@ -449,12 +449,12 @@ app.put('/api/user-types/:id', (req, res) => {
       }
       return;
     }
-    
+
     if (results.affectedRows === 0) {
       res.status(404).json({ error: 'User type not found' });
       return;
     }
-    
+
     logger.info('User type updated:', { id, name, level });
     res.json({ message: 'User type updated successfully' });
   });
@@ -463,40 +463,40 @@ app.put('/api/user-types/:id', (req, res) => {
 // DELETE user type (soft delete)
 app.delete('/api/user-types/:id', (req, res) => {
   const { id } = req.params;
-  
+
   // First check if the user type is being used by any users
   const checkUsageQuery = 'SELECT COUNT(*) as count FROM users WHERE user_type_id = ? AND active = 1';
-  
+
   db.execute(checkUsageQuery, [id], (err, results) => {
     if (err) {
       logger.error('Error checking user type usage:', err);
       res.status(500).json({ error: 'Error checking user type usage' });
       return;
     }
-    
+
     if (results[0].count > 0) {
-      res.status(400).json({ 
+      res.status(400).json({
         error: 'Cannot delete user type as it is currently assigned to active users',
         usageCount: results[0].count
       });
       return;
     }
-    
+
     // Soft delete the user type
     const deleteQuery = 'UPDATE user_types SET active = 0, updated_at = CURRENT_TIMESTAMP WHERE id = ?';
-    
+
     db.execute(deleteQuery, [id], (err, results) => {
       if (err) {
         logger.error('Error deleting user type:', err);
         res.status(500).json({ error: 'Error deleting user type' });
         return;
       }
-      
+
       if (results.affectedRows === 0) {
         res.status(404).json({ error: 'User type not found' });
         return;
       }
-      
+
       logger.info('User type deleted:', { id });
       res.json({ message: 'User type deleted successfully' });
     });
@@ -510,27 +510,27 @@ app.delete('/api/user-types/:id', (req, res) => {
 // GET all users with their user type information
 app.get('/api/users', (req, res) => {
   const { company_id = 1, role, user_type_id, active } = req.query;
-  
+
   let whereClause = 'WHERE u.company_id = ?';
   const queryParams = [company_id];
-  
+
   if (role && role !== 'all') {
     whereClause += ' AND u.role = ?';
     queryParams.push(role);
   }
-  
+
   if (user_type_id) {
     whereClause += ' AND u.user_type_id = ?';
     queryParams.push(user_type_id);
   }
-  
+
   if (active !== undefined) {
     whereClause += ' AND u.active = ?';
     queryParams.push(active === 'true' ? 1 : 0);
   }
-  
+
   const query = `
-    SELECT 
+    SELECT
       u.id,
       u.name,
       u.email,
@@ -550,25 +550,25 @@ app.get('/api/users', (req, res) => {
     ${whereClause}
     ORDER BY u.role, u.name
   `;
-  
+
   db.execute(query, queryParams, (err, results) => {
     if (err) {
       logger.error('Error fetching users:', err);
       res.status(500).json({ error: 'Error fetching users' });
       return;
     }
-    
+
     // Parse JSON permissions and format results
     const users = results.map(user => ({
       ...user,
-      userTypePermissions: user.userTypePermissions 
-        ? (typeof user.userTypePermissions === 'string' 
-          ? JSON.parse(user.userTypePermissions) 
+      userTypePermissions: user.userTypePermissions
+        ? (typeof user.userTypePermissions === 'string'
+          ? JSON.parse(user.userTypePermissions)
           : user.userTypePermissions)
         : {},
       appointments: user.role === 'client' ? user.appointments : user.staffAppointments
     }));
-    
+
     res.json(users);
   });
 });
@@ -576,9 +576,9 @@ app.get('/api/users', (req, res) => {
 // GET user by ID with full details
 app.get('/api/users/:id', (req, res) => {
   const { id } = req.params;
-  
+
   const query = `
-    SELECT 
+    SELECT
       u.id,
       u.name,
       u.email,
@@ -597,79 +597,79 @@ app.get('/api/users/:id', (req, res) => {
     LEFT JOIN user_types ut ON u.user_type_id = ut.id
     WHERE u.id = ?
   `;
-  
+
   db.execute(query, [id], (err, results) => {
     if (err) {
       logger.error('Error fetching user:', err);
       res.status(500).json({ error: 'Error fetching user' });
       return;
     }
-    
+
     if (results.length === 0) {
       res.status(404).json({ error: 'User not found' });
       return;
     }
-    
+
     const user = {
       ...results[0],
-      userTypePermissions: results[0].userTypePermissions 
-        ? (typeof results[0].userTypePermissions === 'string' 
-          ? JSON.parse(results[0].userTypePermissions) 
+      userTypePermissions: results[0].userTypePermissions
+        ? (typeof results[0].userTypePermissions === 'string'
+          ? JSON.parse(results[0].userTypePermissions)
           : results[0].userTypePermissions)
         : {},
       appointments: results[0].role === 'client' ? results[0].clientAppointments : results[0].staffAppointments
     };
-    
+
     res.json(user);
   });
 });
 
 // POST create new user
 app.post('/api/users', (req, res) => {
-  const { 
-    company_id = 1, 
-    user_type_id, 
-    name, 
-    email, 
-    password, 
-    phone, 
+  const {
+    company_id = 1,
+    user_type_id,
+    name,
+    email,
+    password,
+    phone,
     role,
-    created_by = 1 
+    created_by = 1
   } = req.body;
-  
+
   if (!name || !email || !user_type_id) {
     return res.status(400).json({ error: 'Name, email, and user type are required' });
   }
-  
+
   // Validate email format
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!emailRegex.test(email)) {
     return res.status(400).json({ error: 'Invalid email format' });
   }
-  
+
   // First, get the user type to determine the role if not provided
   const getUserTypeQuery = 'SELECT level FROM user_types WHERE id = ? AND active = 1';
-  
+
   db.execute(getUserTypeQuery, [user_type_id], (err, userTypeResults) => {
     if (err) {
       logger.error('Error fetching user type:', err);
       res.status(500).json({ error: 'Error validating user type' });
       return;
     }
-    
+
     if (userTypeResults.length === 0) {
       res.status(400).json({ error: 'Invalid user type' });
       return;
     }
-    
+
     const userRole = role || userTypeResults[0].level;
     const hashedPassword = password || `temp${Date.now()}`; // Temporary password if not provided
-    
+
     const query = `
       INSERT INTO users (company_id, user_type_id, name, email, password, phone, role, created_by)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `;
-    
+
     db.execute(query, [company_id, user_type_id, name, email, hashedPassword, phone, userRole, created_by], (err, results) => {
       if (err) {
         logger.error('Error creating user:', err);
@@ -680,10 +680,10 @@ app.post('/api/users', (req, res) => {
         }
         return;
       }
-      
+
       // Get the newly created user with type information
       const getUserQuery = `
-        SELECT 
+        SELECT
           u.id,
           u.name,
           u.email,
@@ -697,14 +697,14 @@ app.post('/api/users', (req, res) => {
         LEFT JOIN user_types ut ON u.user_type_id = ut.id
         WHERE u.id = ?
       `;
-      
+
       db.execute(getUserQuery, [results.insertId], (err, userResults) => {
         if (err) {
           logger.error('Error fetching new user:', err);
           res.status(500).json({ error: 'User created but error fetching details' });
           return;
         }
-        
+
         logger.info('User created:', { id: results.insertId, name, email, role: userRole });
         res.status(201).json(userResults[0]);
       });
@@ -716,36 +716,36 @@ app.post('/api/users', (req, res) => {
 app.put('/api/users/:id', (req, res) => {
   const { id } = req.params;
   const { user_type_id, name, email, phone, active } = req.body;
-  
+
   if (!name || !email) {
     return res.status(400).json({ error: 'Name and email are required' });
   }
-  
+
   // Validate email format
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!emailRegex.test(email)) {
     return res.status(400).json({ error: 'Invalid email format' });
   }
-  
+
   let updateQuery = `
-    UPDATE users 
+    UPDATE users
     SET name = ?, email = ?, phone = ?
   `;
   let queryParams = [name, email, phone];
-  
+
   if (user_type_id) {
     updateQuery += ', user_type_id = ?';
     queryParams.push(user_type_id);
   }
-  
+
   if (active !== undefined) {
     updateQuery += ', active = ?';
     queryParams.push(active);
   }
-  
+
   updateQuery += ' WHERE id = ?';
   queryParams.push(id);
-  
+
   db.execute(updateQuery, queryParams, (err, results) => {
     if (err) {
       logger.error('Error updating user:', err);
@@ -756,12 +756,12 @@ app.put('/api/users/:id', (req, res) => {
       }
       return;
     }
-    
+
     if (results.affectedRows === 0) {
       res.status(404).json({ error: 'User not found' });
       return;
     }
-    
+
     logger.info('User updated:', { id, name, email });
     res.json({ message: 'User updated successfully' });
   });
@@ -770,44 +770,44 @@ app.put('/api/users/:id', (req, res) => {
 // DELETE user (soft delete)
 app.delete('/api/users/:id', (req, res) => {
   const { id } = req.params;
-  
+
   // Check if user has any appointments
   const checkAppointmentsQuery = `
-    SELECT COUNT(*) as count 
-    FROM appointments 
+    SELECT COUNT(*) as count
+    FROM appointments
     WHERE (client_id = ? OR staff_id = ?) AND status NOT IN ('cancelled', 'completed')
   `;
-  
+
   db.execute(checkAppointmentsQuery, [id, id], (err, results) => {
     if (err) {
       logger.error('Error checking user appointments:', err);
       res.status(500).json({ error: 'Error checking user dependencies' });
       return;
     }
-    
+
     if (results[0].count > 0) {
-      res.status(400).json({ 
+      res.status(400).json({
         error: 'Cannot delete user with active appointments',
         activeAppointments: results[0].count
       });
       return;
     }
-    
+
     // Soft delete the user
     const deleteQuery = 'UPDATE users SET active = 0 WHERE id = ?';
-    
+
     db.execute(deleteQuery, [id], (err, results) => {
       if (err) {
         logger.error('Error deleting user:', err);
         res.status(500).json({ error: 'Error deleting user' });
         return;
       }
-      
+
       if (results.affectedRows === 0) {
         res.status(404).json({ error: 'User not found' });
         return;
       }
-      
+
       logger.info('User deleted:', { id });
       res.json({ message: 'User deleted successfully' });
     });
@@ -817,7 +817,7 @@ app.delete('/api/users/:id', (req, res) => {
 // GET support cases
 app.get('/api/support-cases', (req, res) => {
   const query = `
-    SELECT 
+    SELECT
       id,
       subject,
       description,
@@ -833,7 +833,7 @@ app.get('/api/support-cases', (req, res) => {
 // GET appointments
 app.get('/api/appointments', (req, res) => {
   const { date, start_date, end_date } = req.query;
-  
+
   logger.info('GET /api/appointments - Request received', {
     origin: req.get('origin'),
     headers: req.headers,
@@ -841,7 +841,7 @@ app.get('/api/appointments', (req, res) => {
     start_date,
     end_date
   });
-  
+
   let whereClause = 'WHERE a.company_id = 1';
   const queryParams = [];
 
@@ -852,7 +852,7 @@ app.get('/api/appointments', (req, res) => {
     whereClause += ' AND a.date BETWEEN ? AND ?';
     queryParams.push(start_date, end_date);
   }
-    const query = `    SELECT 
+    const query = `    SELECT
       a.id,
       a.date,
       a.time,
@@ -877,13 +877,13 @@ app.get('/api/appointments', (req, res) => {
     ${whereClause}
     ORDER BY a.date ASC, a.time ASC
   `;
-  
+
   db.query(query, queryParams, (err, results) => {
     if (err) {
       logger.error('Error fetching appointments:', err);
       return res.status(500).json({ error: err.message });
     }
-    
+
     // Formatear los resultados
     const formattedResults = results.map(apt => ({
       id: apt.id,
@@ -918,7 +918,7 @@ app.get('/api/appointments', (req, res) => {
 app.post('/api/appointments', (req, res) => {
   const { client_id, service_id, staff_id, date, time } = req.body;
   const query = `
-    INSERT INTO appointments (company_id, client_id, service_id, staff_id, date, time, status) 
+    INSERT INTO appointments (company_id, client_id, service_id, staff_id, date, time, status)
     VALUES (1, ?, ?, ?, ?, ?, 'scheduled')
   `;
   db.query(query, [client_id, service_id, staff_id, date, time], (err, results) => {
@@ -965,7 +965,7 @@ app.delete('/api/appointments/:id', (req, res) => {
 app.post('/api/services', (req, res) => {
     const { name, description, price, duration, category_id, active } = req.body;
     const query = `
-        INSERT INTO services (company_id, name, description, price, duration, category_id, active) 
+        INSERT INTO services (company_id, name, description, price, duration, category_id, active)
         VALUES (1, ?, ?, ?, ?, ?, ?)
     `;
     db.query(query, [name, description, price, duration, category_id, active], (err, results) => {
@@ -992,7 +992,7 @@ app.put('/api/services/:id', (req, res) => {
     const { id } = req.params;
     const { name, description, price, duration, category_id } = req.body;
     const query = `
-        UPDATE services 
+        UPDATE services
         SET name = ?, description = ?, price = ?, duration = ?, category_id = ?
         WHERE id = ? AND company_id = 1
     `;
@@ -1321,7 +1321,7 @@ app.put('/api/clients/:id', (req, res) => {
       timestamp: new Date().toISOString()
     });
 
-    res.json({ 
+    res.json({
       message: 'Cliente actualizado correctamente',
       id: parseInt(id)
     });
@@ -1334,8 +1334,8 @@ app.delete('/api/clients/:id', (req, res) => {
 
   // Primero verificamos si el cliente tiene citas
   const checkAppointmentsQuery = `
-    SELECT COUNT(*) as appointmentCount 
-    FROM appointments 
+    SELECT COUNT(*) as appointmentCount
+    FROM appointments
     WHERE client_id = ? AND company_id = 1
   `;
 
@@ -1350,14 +1350,14 @@ app.delete('/api/clients/:id', (req, res) => {
     }
 
     if (results[0].appointmentCount > 0) {
-      return res.status(400).json({ 
-        error: 'No se puede eliminar el cliente porque tiene citas registradas' 
+      return res.status(400).json({
+        error: 'No se puede eliminar el cliente porque tiene citas registradas'
       });
     }
 
     // Si no tiene citas, procedemos a eliminar
     const deleteQuery = 'DELETE FROM clients WHERE id = ? AND company_id = 1';
-    
+
     db.query(deleteQuery, [id], (err, results) => {
       if (err) {
         logger.error('Error deleting client', {
@@ -1390,7 +1390,7 @@ app.post('/api/staff', (req, res) => {
     }
 
     const query = `
-      INSERT INTO users (company_id, name, email, phone, role, active) 
+      INSERT INTO users (company_id, name, email, phone, role, active)
       VALUES (1, ?, ?, ?, ?, 1)
     `;
     db.query(query, [name, email, phone, role], (err, results) => {
@@ -1427,33 +1427,33 @@ app.get('/api/specialties', (req, res) => {
     path: '/api/specialties',
     timestamp: new Date().toISOString()
   });
-  
+
   // No seleccionamos el campo color, solo los existentes
   const query = 'SELECT id, name, description, active FROM specialties WHERE company_id = 1 ORDER BY name';
   logger.info('Executing query', {
     query: query,
     timestamp: new Date().toISOString()
   });
-  
+
   db.query(query, (err, results) => {
     if (err) {
       console.error('❌ Database Error:', err);
       return res.status(500).json({ error: err.message });
     }
-    
+
     console.log('Query results:', results);
     logger.info('Query executed successfully', {
       count: results.length,
       results: results,
       timestamp: new Date().toISOString()
     });
-    
+
     // Si se requiere color en frontend, se agrega aquí por defecto (no en la DB)
     const resultsWithColor = results.map(specialty => ({
       ...specialty,
       color: '#3B82F6' // Color azul por defecto, solo para UI
     }));
-    
+
     res.json(resultsWithColor);
   });
 });
@@ -1461,25 +1461,25 @@ app.get('/api/specialties', (req, res) => {
 app.post('/api/specialties', (req, res) => {
   console.log('📝 POST /api/specialties - Request received');
   console.log('📦 Request body:', JSON.stringify(req.body, null, 2));
-  
+
   const { name, description } = req.body;
   // No insertamos color
   const query = `
-    INSERT INTO specialties (company_id, name, description, created_by) 
+    INSERT INTO specialties (company_id, name, description, created_by)
     VALUES (1, ?, ?, 1)
   `;
   console.log('📝 Query to execute:', query);
   console.log('📝 Query parameters:', [name, description]);
-  
+
   db.query(query, [name, description], (err, results) => {
     if (err) {
       console.error('❌ Database Error:', err);
       return res.status(500).json({ error: err.message });
     }
-    
+
     console.log('✅ Query successful');
     console.log('📊 Insert ID:', results.insertId);
-    
+
     // Solo agregamos color por defecto en la respuesta
     const newSpecialty = {
       id: results.insertId,
@@ -1489,7 +1489,7 @@ app.post('/api/specialties', (req, res) => {
       active: true
     };
     console.log('📦 Returning:', JSON.stringify(newSpecialty, null, 2));
-    
+
     res.status(201).json(newSpecialty);
   });
 });
@@ -1498,40 +1498,40 @@ app.put('/api/specialties/:id', (req, res) => {
   const { id } = req.params;
   console.log(`📝 PUT /api/specialties/${id} - Request received`);
   console.log('📦 Request body:', JSON.stringify(req.body, null, 2));
-  
+
   const { name, description, active } = req.body;
   // No actualizamos color
   const query = `
-    UPDATE specialties 
+    UPDATE specialties
     SET name = ?, description = ?, active = ?
     WHERE id = ? AND company_id = 1
   `;
   console.log('📝 Query to execute:', query);
   console.log('📝 Query parameters:', [name, description, active, id]);
-  
+
   db.query(query, [name, description, active !== undefined ? active : true, id], (err, results) => {
     if (err) {
       console.error('❌ Database Error:', err);
       return res.status(500).json({ error: err.message });
     }
-    
+
     console.log('✅ Query successful');
     console.log('📊 Affected rows:', results.affectedRows);
-    
+
     if (results.affectedRows === 0) {
       return res.status(404).json({ error: 'Especialidad no encontrada' });
     }
-    
+
     // Solo agregamos color por defecto en la respuesta
-    const updatedSpecialty = { 
-      id: parseInt(id), 
-      name, 
-      description, 
+    const updatedSpecialty = {
+      id: parseInt(id),
+      name,
+      description,
       color: '#3B82F6', // Solo para UI
-      active 
+      active
     };
     console.log('📦 Returning:', JSON.stringify(updatedSpecialty, null, 2));
-    
+
     res.json(updatedSpecialty);
   });
 });
@@ -1539,47 +1539,47 @@ app.put('/api/specialties/:id', (req, res) => {
 app.delete('/api/specialties/:id', (req, res) => {
   const { id } = req.params;
   console.log(`❌ DELETE /api/specialties/${id} - Request received`);
-  
+
   // Primero verificamos si la especialidad está siendo usada por algún staff
   const checkUsageQuery = `
-    SELECT COUNT(*) as usageCount 
-    FROM staff_specialties 
+    SELECT COUNT(*) as usageCount
+    FROM staff_specialties
     WHERE specialty_id = ?
   `;
-  
+
   db.query(checkUsageQuery, [id], (err, results) => {
     if (err) {
       console.error('❌ Database Error:', err);
       return res.status(500).json({ error: err.message });
     }
-    
+
     if (results[0].usageCount > 0) {
-      console.log('⚠️ Specialty is in use by staff members');
-      return res.status(400).json({ 
-        error: 'No se puede eliminar la especialidad porque está asignada a miembros del staff' 
+      console.log('⚠︝ Specialty is in use by staff members');
+      return res.status(400).json({
+        error: 'No se puede eliminar la especialidad porque está asignada a miembros del staff'
       });
     }
-    
+
     // Si no está en uso, procedemos a eliminar
     const deleteQuery = 'DELETE FROM specialties WHERE id = ? AND company_id = 1';
     console.log('📝 Query to execute:', deleteQuery);
     console.log('📝 Query parameters:', [id]);
-    
+
     db.query(deleteQuery, [id], (err, results) => {
       if (err) {
         console.error('❌ Database Error:', err);
         console.error('Stack:', err.stack);
         return res.status(500).json({ error: err.message });
       }
-      
+
       console.log('✅ Query successful');
       console.log('📊 Affected rows:', results.affectedRows);
-      
+
       if (results.affectedRows === 0) {
-        console.log('⚠️ No specialty found with ID:', id);
+        console.log('⚠︝ No specialty found with ID:', id);
         return res.status(404).json({ error: 'Specialty not found' });
       }
-      
+
       res.status(204).send();
     });
   });
@@ -1588,10 +1588,10 @@ app.delete('/api/specialties/:id', (req, res) => {
 // --- Staff Specialties Management ---
 app.get('/api/staff/:staffId/specialties', (req, res) => {
   const { staffId } = req.params;
-  console.log(`🔍 GET /api/staff/${staffId}/specialties - Request received`);
-  
+  console.log(`🔝 GET /api/staff/${staffId}/specialties - Request received`);
+
   const query = `
-    SELECT 
+    SELECT
       ss.id as assignment_id,
       s.id,
       s.name,
@@ -1623,26 +1623,26 @@ app.get('/api/staff/:staffId/specialties', (req, res) => {
 app.post('/api/staff/:staffId/specialties', (req, res) => {
   const { staffId } = req.params;
   const { specialtyId, proficiencyLevel, yearsExperience, certificationInfo, isPrimary } = req.body;
-  
+
   console.log(`📝 POST /api/staff/${staffId}/specialties - Request received`);
   console.log('📦 Request body:', JSON.stringify(req.body, null, 2));
-  
+
   // Si se marca como principal, primero desmarcar otras especialidades principales
-  const updatePrimaryQuery = isPrimary ? 
+  const updatePrimaryQuery = isPrimary ?
     'UPDATE staff_specialties SET is_primary = FALSE WHERE staff_id = ?' : null;
-  
+
   const insertQuery = `
     INSERT INTO staff_specialties (staff_id, specialty_id, proficiency_level, years_experience, certification_info, is_primary)
     VALUES (?, ?, ?, ?, ?, ?)
   `;
-  
+
   const executeInsert = () => {
     db.query(insertQuery, [
-      staffId, 
-      specialtyId, 
-      proficiencyLevel || 'intermediate', 
-      yearsExperience || 0, 
-      certificationInfo || null, 
+      staffId,
+      specialtyId,
+      proficiencyLevel || 'intermediate',
+      yearsExperience || 0,
+      certificationInfo || null,
       isPrimary || false
     ], (err, results) => {
       if (err) {
@@ -1652,15 +1652,15 @@ app.post('/api/staff/:staffId/specialties', (req, res) => {
         console.error('❌ Database Error:', err);
         return res.status(500).json({ error: err.message });
       }
-      
+
       console.log('✅ Specialty assigned successfully');
-      res.status(201).json({ 
-        id: results.insertId, 
-        message: 'Especialidad asignada correctamente' 
+      res.status(201).json({
+        id: results.insertId,
+        message: 'Especialidad asignada correctamente'
       });
     });
   };
-  
+
   if (updatePrimaryQuery && isPrimary) {
     db.query(updatePrimaryQuery, [staffId], (err) => {
       if (err) {
@@ -1677,19 +1677,19 @@ app.post('/api/staff/:staffId/specialties', (req, res) => {
 app.put('/api/staff/:staffId/specialties/:assignmentId', (req, res) => {
   const { staffId, assignmentId } = req.params;
   const { proficiencyLevel, yearsExperience, certificationInfo, isPrimary } = req.body;
-  
+
   console.log(`📝 PUT /api/staff/${staffId}/specialties/${assignmentId} - Request received`);
-  
+
   // Si se marca como principal, primero desmarcar otras especialidades principales
-  const updatePrimaryQuery = isPrimary ? 
+  const updatePrimaryQuery = isPrimary ?
     'UPDATE staff_specialties SET is_primary = FALSE WHERE staff_id = ? AND id != ?' : null;
-  
+
   const updateQuery = `
-    UPDATE staff_specialties 
+    UPDATE staff_specialties
     SET proficiency_level = ?, years_experience = ?, certification_info = ?, is_primary = ?
     WHERE id = ? AND staff_id = ?
   `;
-  
+
   const executeUpdate = () => {
     db.query(updateQuery, [
       proficiencyLevel || 'intermediate',
@@ -1703,16 +1703,16 @@ app.put('/api/staff/:staffId/specialties/:assignmentId', (req, res) => {
         console.error('❌ Database Error:', err);
         return res.status(500).json({ error: err.message });
       }
-      
+
       if (results.affectedRows === 0) {
         return res.status(404).json({ error: 'Asignación de especialidad no encontrada' });
       }
-      
+
       console.log('✅ Specialty assignment updated successfully');
       res.json({ message: 'Especialidad actualizada correctamente' });
     });
   };
-  
+
   if (updatePrimaryQuery && isPrimary) {
     db.query(updatePrimaryQuery, [staffId, assignmentId], (err) => {
       if (err) {
@@ -1729,19 +1729,19 @@ app.put('/api/staff/:staffId/specialties/:assignmentId', (req, res) => {
 app.delete('/api/staff/:staffId/specialties/:assignmentId', (req, res) => {
   const { staffId, assignmentId } = req.params;
   console.log(`❌ DELETE /api/staff/${staffId}/specialties/${assignmentId} - Request received`);
-  
+
   const query = 'DELETE FROM staff_specialties WHERE id = ? AND staff_id = ?';
-  
+
   db.query(query, [assignmentId, staffId], (err, results) => {
     if (err) {
       console.error('❌ Database Error:', err);
       return res.status(500).json({ error: err.message });
     }
-    
+
     if (results.affectedRows === 0) {
       return res.status(404).json({ error: 'Asignación de especialidad no encontrada' });
     }
-    
+
     console.log('✅ Specialty assignment deleted successfully');
     res.status(204).send();
   });
@@ -1822,25 +1822,25 @@ app.get('/api/search', async (req, res) => {
     switch (type) {
       case 'client':
         query = `
-          SELECT 
-            c.id, 
-            'client' as type, 
-            c.name as title, 
-            c.email as subtitle, 
+          SELECT
+            c.id,
+            'client' as type,
+            c.name as title,
+            c.email as subtitle,
             CONCAT('/clients/', c.id) as route
           FROM users c
           WHERE c.company_id = ? AND c.role = 'client' AND (c.name LIKE ? OR c.email LIKE ?)
           LIMIT 5`;
         queryParams = [companyId, searchTerm, searchTerm];
         break;
-      
+
       case 'service':
         query = `
-          SELECT 
-            s.id, 
-            'service' as type, 
-            s.name as title, 
-            sc.name as subtitle, 
+          SELECT
+            s.id,
+            'service' as type,
+            s.name as title,
+            sc.name as subtitle,
             CONCAT('/services/', s.id) as route
           FROM services s
           LEFT JOIN service_categories sc ON s.category_id = sc.id
@@ -1851,11 +1851,11 @@ app.get('/api/search', async (req, res) => {
 
       case 'staff':
         query = `
-          SELECT 
-            u.id, 
-            'staff' as type, 
-            u.name as title, 
-            u.role as subtitle, 
+          SELECT
+            u.id,
+            'staff' as type,
+            u.name as title,
+            u.role as subtitle,
             CONCAT('/staff/', u.id) as route
           FROM users u
           WHERE u.company_id = ? AND u.role = 'staff' AND u.name LIKE ?
@@ -1865,10 +1865,10 @@ app.get('/api/search', async (req, res) => {
 
       case 'appointment':
         query = `
-          SELECT 
-            a.id, 
-            'appointment' as type, 
-            CONCAT('Cita #', a.id, ' - ', c.name) as title, 
+          SELECT
+            a.id,
+            'appointment' as type,
+            CONCAT('Cita #', a.id, ' - ', c.name) as title,
             CONCAT(DATE_FORMAT(a.date, '%Y-%m-%d'), ' ', a.time) as subtitle,
             CONCAT('/appointments/', a.id) as route
           FROM appointments a
@@ -1878,11 +1878,11 @@ app.get('/api/search', async (req, res) => {
         queryParams = [companyId, searchTerm];
         break;      case 'category':
         query = `
-          SELECT 
-            sc.id, 
-            'category' as type, 
-            sc.name as title, 
-            sc.description as subtitle, 
+          SELECT
+            sc.id,
+            'category' as type,
+            sc.name as title,
+            sc.description as subtitle,
             CONCAT('/service-categories/', sc.id) as route
           FROM service_categories sc
           WHERE sc.company_id = ? AND sc.name LIKE ?
@@ -1892,11 +1892,11 @@ app.get('/api/search', async (req, res) => {
 
       case 'specialty':
         query = `
-          SELECT 
-            s.id, 
-            'specialty' as type, 
-            s.name as title, 
-            s.description as subtitle, 
+          SELECT
+            s.id,
+            'specialty' as type,
+            s.name as title,
+            s.description as subtitle,
             CONCAT('/specialties/', s.id) as route
           FROM specialties s
           WHERE s.company_id = ? AND (s.name LIKE ? OR s.description LIKE ?) AND s.active = 1
@@ -1929,13 +1929,13 @@ app.get('/api/appointments/list', (req, res) => { res.json([]); });
 // GET calendar events with detailed information
 app.get('/api/appointments/calendar', (req, res) => {
   const { year, month } = req.query;
-  
+
   // Calcular el primer y último día del mes
   const startDate = `${year}-${month.padStart(2, '0')}-01`;
   const endDate = `${year}-${month.padStart(2, '0')}-31`;
-  
+
   const query = `
-    SELECT 
+    SELECT
       a.id,
       a.date,
       a.time,
@@ -1953,7 +1953,7 @@ app.get('/api/appointments/calendar', (req, res) => {
     JOIN services s ON a.service_id = s.id
     LEFT JOIN service_categories sc ON s.category_id = sc.id
     LEFT JOIN users u ON a.staff_id = u.id AND u.role = 'staff'
-    WHERE a.company_id = 1 
+    WHERE a.company_id = 1
     AND a.date BETWEEN ? AND ?
     ORDER BY a.date ASC, a.time ASC
   `;
@@ -1997,19 +1997,19 @@ app.get('/api/appointments/calendar', (req, res) => {
 // GET calendar filters and aggregations
 app.get('/api/appointments/filters', (req, res) => {
   const { start_date, end_date } = req.query;
-  
+
   const queries = {
     services: `
       SELECT DISTINCT s.id, s.name, COUNT(a.id) as appointment_count
       FROM services s
-      LEFT JOIN appointments a ON s.id = a.service_id 
+      LEFT JOIN appointments a ON s.id = a.service_id
       AND a.date BETWEEN ? AND ?
       GROUP BY s.id, s.name
     `,
     staff: `
       SELECT DISTINCT u.id, u.name, COUNT(a.id) as appointment_count
       FROM users u
-      LEFT JOIN appointments a ON u.id = a.staff_id 
+      LEFT JOIN appointments a ON u.id = a.staff_id
       AND a.date BETWEEN ? AND ?
       WHERE u.role = 'staff'
       GROUP BY u.id, u.name
@@ -2052,7 +2052,7 @@ app.get('/api/appointments/filters', (req, res) => {
   });
 });
 
-// --- ENDPOINTS PARA REPORTES DINÁMICOS ---
+// --- ENDPOINTS PARA REPORTES DINÝMICOS ---
 
 // Obtener datos generales para reportes
 app.get('/api/reports/overview', async (req, res) => {
@@ -2062,7 +2062,7 @@ app.get('/api/reports/overview', async (req, res) => {
   try {
     // Query principal con todas las métricas
     const query = `
-      SELECT 
+      SELECT
         COUNT(a.id) as total_appointments,
         COUNT(CASE WHEN a.status = 'completed' THEN 1 END) as completed_appointments,
         COUNT(CASE WHEN a.status = 'cancelled' THEN 1 END) as cancelled_appointments,
@@ -2075,7 +2075,7 @@ app.get('/api/reports/overview', async (req, res) => {
         COUNT(DISTINCT s.id) as services_used
       FROM appointments a
       LEFT JOIN services s ON a.service_id = s.id
-      WHERE a.company_id = ? 
+      WHERE a.company_id = ?
       ${start_date && end_date ? 'AND a.date BETWEEN ? AND ?' : ''}
     `;
 
@@ -2088,11 +2088,11 @@ app.get('/api/reports/overview', async (req, res) => {
     const overview = results[0];
 
     // Calcular métricas adicionales
-    overview.cancellation_rate = overview.total_appointments > 0 
+    overview.cancellation_rate = overview.total_appointments > 0
       ? ((overview.cancelled_appointments / overview.total_appointments) * 100).toFixed(2)
       : 0;
-    
-    overview.completion_rate = overview.total_appointments > 0 
+
+    overview.completion_rate = overview.total_appointments > 0
       ? ((overview.completed_appointments / overview.total_appointments) * 100).toFixed(2)
       : 0;
 
@@ -2113,7 +2113,7 @@ app.get('/api/reports/revenue', async (req, res) => {
     switch (period) {
       case 'daily':
         dateFormat = '%Y-%m-%d';
-        groupBy = 'DATE(a.date)';
+        groupBy = 'YEAR(a.date), MONTH(a.date), DAY(a.date)';
         break;
       case 'weekly':
         dateFormat = '%Y-%u';
@@ -2133,7 +2133,7 @@ app.get('/api/reports/revenue', async (req, res) => {
     }
 
     const query = `
-      SELECT 
+      SELECT
         DATE_FORMAT(a.date, '${dateFormat}') as period,
         DATE_FORMAT(a.date, '%Y-%m-%d') as date,
         COUNT(a.id) as total_appointments,
@@ -2143,11 +2143,11 @@ app.get('/api/reports/revenue', async (req, res) => {
         COALESCE(AVG(s.price), 0) as avg_price
       FROM appointments a
       LEFT JOIN services s ON a.service_id = s.id
-      WHERE a.company_id = ? 
+      WHERE a.company_id = ?
       ${start_date && end_date ? 'AND a.date BETWEEN ? AND ?' : ''}
       GROUP BY ${groupBy}
       ORDER BY a.date ASC
-   
+
     `;
 
     const params = [companyId];
@@ -2170,7 +2170,7 @@ app.get('/api/reports/services', async (req, res) => {
 
   try {
     const query = `
-      SELECT 
+      SELECT
         s.id,
         s.name as service_name,
         sc.name as category_name,
@@ -2211,7 +2211,7 @@ app.get('/api/reports/staff', async (req, res) => {
 
   try {
     const query = `
-      SELECT 
+      SELECT
         u.id,
         u.name as staff_name,
         u.email,
@@ -2240,15 +2240,15 @@ app.get('/api/reports/staff', async (req, res) => {
     params.push(companyId);
 
     const [results] = await db.promise().query(query, params);
-    
+
     // Procesar especialidades
     const processedResults = results.map(staff => ({
       ...staff,
       specialties: staff.specialties ? staff.specialties.split(',') : [],
-      completion_rate: staff.total_appointments > 0 
+      completion_rate: staff.total_appointments > 0
         ? ((staff.completed_appointments / staff.total_appointments) * 100).toFixed(2)
         : 0,
-      cancellation_rate: staff.total_appointments > 0 
+      cancellation_rate: staff.total_appointments > 0
         ? ((staff.cancelled_appointments / staff.total_appointments) * 100).toFixed(2)
         : 0
     }));
@@ -2267,7 +2267,7 @@ app.get('/api/reports/clients', async (req, res) => {
 
   try {
     const query = `
-      SELECT 
+      SELECT
         u.id,
         u.name as client_name,
         u.email,
@@ -2321,7 +2321,7 @@ app.get('/api/reports/sales-by-month', async (req, res) => {
         FROM months
         WHERE month_start < DATE_FORMAT(STR_TO_DATE(?, '%Y-%m-%d'), '%Y-%m-01')
       )
-      SELECT 
+      SELECT
         YEAR(month_start) as year,
         MONTHNAME(month_start) as month,
         MONTH(month_start) as month_number,
@@ -2450,7 +2450,7 @@ app.get('/api/reports/revenue-by-channel', async (req, res) => {
       filters += ' AND s.name = ?';
       params.push(service);
     }
-    
+
     // Check if channel column exists, if not, use a default value
     const query = `
       SELECT
@@ -2461,7 +2461,7 @@ app.get('/api/reports/revenue-by-channel', async (req, res) => {
       WHERE ${filters}
       GROUP BY COALESCE(a.channel, 'presencial')
     `;
-    
+
     try {
       const [results] = await db.promise().query(query, params);
       res.json(results);
@@ -2521,7 +2521,7 @@ app.get('/api/reports/top-services', async (req, res) => {
 
 // GET subscription information
 app.get('/api/billing/subscription', (req, res) => {
-  const query = `    SELECT 
+  const query = `    SELECT
       s.id,
       s.plan_id,
       bp.name as plan_name,
@@ -2537,24 +2537,24 @@ app.get('/api/billing/subscription', (req, res) => {
     ORDER BY s.created_at DESC
     LIMIT 1
   `;
-  
+
   db.query(query, (err, results) => {
     if (err) {
       logger.error('Error fetching subscription:', err);
       return res.status(500).json({ error: err.message });
     }
-    
+
     if (results.length === 0) {
       return res.json(null);
     }
-    
+
     res.json(results[0]);
   });
 });
 
 // GET available plans
 app.get('/api/billing/plans', (req, res) => {  const query = `
-    SELECT 
+    SELECT
       id,
       name,
       description,
@@ -2568,10 +2568,10 @@ app.get('/api/billing/plans', (req, res) => {  const query = `
       api_access as has_api_access,
       CASE WHEN support_level = 'premium' THEN 1 ELSE 0 END as has_priority_support,
       active as is_active,
-      CASE 
-        WHEN integrations_allowed IS NOT NULL AND integrations_allowed != '' 
-        THEN integrations_allowed 
-        ELSE '[]' 
+      CASE
+        WHEN integrations_allowed IS NOT NULL AND integrations_allowed != ''
+        THEN integrations_allowed
+        ELSE '[]'
       END as features
     FROM billing_plans
     WHERE active = 1
@@ -2582,7 +2582,7 @@ app.get('/api/billing/plans', (req, res) => {  const query = `
       logger.error('Error fetching plans:', err);
       return res.status(500).json({ error: err.message });
     }
-    
+
     // Procesar los resultados para asegurar que features sea un JSON válido
     const processedResults = results.map(plan => {
       try {
@@ -2593,7 +2593,7 @@ app.get('/api/billing/plans', (req, res) => {  const query = `
             const parsed = JSON.parse(plan.features);
             if (Array.isArray(parsed)) {
               // Filtrar solo strings válidos
-              const validFeatures = parsed.filter(f => 
+              const validFeatures = parsed.filter(f =>
                 f && typeof f === 'string' && f.trim() !== '' && !(/^\d+$/.test(f.trim()))
               );
               features = JSON.stringify(validFeatures);
@@ -2603,7 +2603,7 @@ app.get('/api/billing/plans', (req, res) => {  const query = `
             features = '[]';
           }
         }
-        
+
         return {
           ...plan,
           features: features,
@@ -2621,7 +2621,7 @@ app.get('/api/billing/plans', (req, res) => {  const query = `
         };
       }
     });
-    
+
     res.json(processedResults);
   });
 });
@@ -2629,7 +2629,7 @@ app.get('/api/billing/plans', (req, res) => {  const query = `
 // GET invoices
 app.get('/api/billing/invoices', (req, res) => {
   const query = `
-    SELECT 
+    SELECT
       id,
       total_amount as amount,
       status,
@@ -2642,7 +2642,7 @@ app.get('/api/billing/invoices', (req, res) => {
     ORDER BY created_at DESC
     LIMIT 50
   `;
-  
+
   db.query(query, (err, results) => {
     if (err) {
       logger.error('Error fetching invoices:', err);
@@ -2656,7 +2656,7 @@ app.get('/api/billing/invoices', (req, res) => {
 app.get('/api/billing/payment-notifications', (req, res) => {
   // Primero intentamos acceder a la tabla, si no existe devolvemos datos mock
   const query = `
-    SELECT 
+    SELECT
       id,
       type,
       title,
@@ -2669,7 +2669,7 @@ app.get('/api/billing/payment-notifications', (req, res) => {
     ORDER BY created_at DESC
     LIMIT 20
   `;
-  
+
   db.query(query, (err, results) => {
     if (err) {
       // Si la tabla no existe, devolver datos mock
@@ -2697,7 +2697,7 @@ app.get('/api/billing/payment-notifications', (req, res) => {
         ];
         return res.json(mockNotifications);
       }
-      
+
       logger.error('Error fetching payment notifications:', err);
       return res.status(500).json({ error: err.message });
     }
@@ -2708,11 +2708,11 @@ app.get('/api/billing/payment-notifications', (req, res) => {
 // POST activate plan with code
 app.post('/api/billing/activate-plan', (req, res) => {
   const { code } = req.body;
-  
+
   if (!code) {
     return res.status(400).json({ error: 'Código de activación requerido' });
   }
-  
+
   // First, validate the activation code
   const validateCodeQuery = `
     SELECT ac.*, bp.name as plan_name, bp.price, bp.billing_cycle
@@ -2720,32 +2720,32 @@ app.post('/api/billing/activate-plan', (req, res) => {
     LEFT JOIN billing_plans bp ON ac.plan_id = bp.id
     WHERE ac.code = ? AND ac.status = 'active' AND ac.expires_at > NOW()
   `;
-  
+
   db.query(validateCodeQuery, [code], (err, codeResults) => {
     if (err) {
       // Si la tabla no existe, simular validación con códigos mock
       if (err.code === 'ER_NO_SUCH_TABLE') {
         logger.warn('activation_codes table does not exist, using mock validation');
-        
+
         // Códigos mock para testing
         const mockCodes = {
           'BASIC-2025-ABC123': { plan_id: 1, plan_name: 'Plan Básico', duration_months: 1 },
           'PRO-2025-DEF456': { plan_id: 2, plan_name: 'Plan Profesional', duration_months: 3 }
         };
-        
+
         if (!mockCodes[code]) {
           return res.status(400).json({ error: 'Código inválido o expirado' });
         }
-        
+
         const mockCode = mockCodes[code];
-        
+
         // Crear/actualizar suscripción directamente
         const subscriptionQuery = `
           INSERT INTO subscriptions (
-            company_id, plan_id, start_date, end_date, 
+            company_id, plan_id, start_date, end_date,
             status, auto_renew, created_by
           ) VALUES (
-            1, ?, NOW(), 
+            1, ?, NOW(),
             DATE_ADD(NOW(), INTERVAL ? MONTH),
             'active', 1, 1
           )
@@ -2755,38 +2755,38 @@ app.post('/api/billing/activate-plan', (req, res) => {
             end_date = DATE_ADD(NOW(), INTERVAL ? MONTH),
             updated_at = NOW()
         `;
-        
+
         db.query(subscriptionQuery, [mockCode.plan_id, mockCode.duration_months, mockCode.duration_months], (err, result) => {
           if (err) {
             logger.error('Error creating subscription:', err);
             return res.status(500).json({ error: 'Error al activar el plan' });
           }
-          
-          res.json({ 
-            success: true, 
-            message: `Plan ${mockCode.plan_name} activado exitosamente` 
+
+          res.json({
+            success: true,
+            message: `Plan ${mockCode.plan_name} activado exitosamente`
           });
         });
         return;
       }
-      
+
       logger.error('Error validating activation code:', err);
       return res.status(500).json({ error: 'Error al validar el código' });
     }
-    
+
     if (codeResults.length === 0) {
       return res.status(400).json({ error: 'Código inválido o expirado' });
     }
-    
+
     const activationCode = codeResults[0];
-    
+
     // Create or update subscription
     const subscriptionQuery = `
       INSERT INTO subscriptions (
-        company_id, plan_id, start_date, end_date, 
+        company_id, plan_id, start_date, end_date,
         status, auto_renew, created_by
       ) VALUES (
-        1, ?, NOW(), 
+        1, ?, NOW(),
         DATE_ADD(NOW(), INTERVAL ? MONTH),
         'active', 1, 1
       )
@@ -2796,15 +2796,15 @@ app.post('/api/billing/activate-plan', (req, res) => {
         end_date = DATE_ADD(NOW(), INTERVAL ? MONTH),
         updated_at = NOW()
     `;
-    
+
     const months = activationCode.duration_months || 1;
-    
+
     db.query(subscriptionQuery, [activationCode.plan_id, months, months], (err, result) => {
       if (err) {
         logger.error('Error creating subscription:', err);
         return res.status(500).json({ error: 'Error al activar el plan' });
       }
-      
+
       // Mark activation code as used
       const markUsedQuery = 'UPDATE activation_codes SET status = "used", used_by = 1, used_at = NOW(), company_id = 1 WHERE id = ?';
       db.query(markUsedQuery, [activationCode.id], (err) => {
@@ -2812,10 +2812,10 @@ app.post('/api/billing/activate-plan', (req, res) => {
           logger.warn('Error marking activation code as used:', err);
         }
       });
-      
-      res.json({ 
-        success: true, 
-        message: `Plan ${activationCode.plan_name} activado exitosamente` 
+
+      res.json({
+        success: true,
+        message: `Plan ${activationCode.plan_name} activado exitosamente`
       });
     });
   });
@@ -2824,39 +2824,39 @@ app.post('/api/billing/activate-plan', (req, res) => {
 // POST change plan
 app.post('/api/billing/change-plan', (req, res) => {
   const { new_plan_id, activation_code } = req.body;
-  
+
   if (!new_plan_id) {
-    return res.status(400).json({ 
+    return res.status(400).json({
       error: 'ID del nuevo plan requerido',
-      success: false 
+      success: false
     });
   }
 
   // First, validate that the new plan exists and is active
   const validatePlanQuery = `
-    SELECT id, name, price, billing_cycle, active 
-    FROM billing_plans 
+    SELECT id, name, price, billing_cycle, active
+    FROM billing_plans
     WHERE id = ? AND active = 1
   `;
-  
+
   db.query(validatePlanQuery, [new_plan_id], (err, planResults) => {
     if (err) {
       logger.error('Error validating plan:', err);
-      return res.status(500).json({ 
+      return res.status(500).json({
         error: 'Error al validar el plan',
-        success: false 
+        success: false
       });
     }
-    
+
     if (planResults.length === 0) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         error: 'El plan seleccionado no existe o no está disponible',
-        success: false 
+        success: false
       });
     }
-    
+
     const selectedPlan = planResults[0];
-    
+
     // Check if user already has this plan
     const checkCurrentPlanQuery = `
       SELECT plan_id, bp.name as current_plan_name
@@ -2866,79 +2866,79 @@ app.post('/api/billing/change-plan', (req, res) => {
       ORDER BY s.created_at DESC
       LIMIT 1
     `;
-    
+
     db.query(checkCurrentPlanQuery, (err, currentResults) => {
       if (err) {
         logger.error('Error checking current plan:', err);
-        return res.status(500).json({ 
+        return res.status(500).json({
           error: 'Error al verificar el plan actual',
-          success: false 
+          success: false
         });
       }
-      
+
       if (currentResults.length > 0 && currentResults[0].plan_id === new_plan_id) {
-        return res.status(400).json({ 
+        return res.status(400).json({
           error: 'Ya tienes este plan activo',
-          success: false 
+          success: false
         });
       }
-      
+
       // If activation code is provided, validate it
       if (activation_code && activation_code.trim()) {
         const validateCodeQuery = `
-          SELECT ac.*, bp.name as plan_name 
+          SELECT ac.*, bp.name as plan_name
           FROM activation_codes ac
           LEFT JOIN billing_plans bp ON ac.plan_id = bp.id
           WHERE ac.code = ? AND ac.status = 'active' AND ac.expires_at > NOW()
         `;
-        
+
         db.query(validateCodeQuery, [activation_code.trim()], (err, codeResults) => {
           if (err) {
             // If activation_codes table doesn't exist, use mock validation
             if (err.code === 'ER_NO_SUCH_TABLE') {
               logger.warn('activation_codes table does not exist, using mock validation');
-              
+
               const mockCodes = {
                 'BASIC-2025-ABC123': { plan_id: 1 },
                 'PRO-2025-DEF456': { plan_id: 2 },
                 'ENTERPRISE-789': { plan_id: 3 }
               };
-              
+
               if (!mockCodes[activation_code.trim()]) {
-                return res.status(400).json({ 
+                return res.status(400).json({
                   error: 'Código de activación inválido o expirado',
-                  success: false 
+                  success: false
                 });
               }
-              
+
               // Proceed with plan change using mock validation
               updateSubscriptionPlan(new_plan_id, res, activation_code.trim(), selectedPlan);
               return;
             }
-            
+
             logger.error('Error validating activation code:', err);
-            return res.status(500).json({ 
+            return res.status(500).json({
               error: 'Error al validar el código de activación',
-              success: false 
+              success: false
             });
           }
-          
+
           if (codeResults.length === 0) {
-            return res.status(400).json({ 
+            return res.status(400).json({
               error: 'Código de activación inválido o expirado',
-              success: false 
+              success: false
             });
           }
-          
+
           // Optionally check if code is for the specific plan
           const codeForPlan = codeResults[0];
           if (codeForPlan.plan_id && codeForPlan.plan_id !== new_plan_id) {
-            return res.status(400).json({ 
+            return res.status(400).json({
               error: `Este código es solo para el plan: ${codeForPlan.plan_name}`,
-              success: false 
+              success: false
             });
           }
-          
+
           updateSubscriptionPlan(new_plan_id, res, activation_code.trim(), selectedPlan);
         });
       } else {
@@ -2951,45 +2951,45 @@ app.post('/api/billing/change-plan', (req, res) => {
 function updateSubscriptionPlan(planId, res, activationCode = null, planInfo = null) {
   // Get current subscription info for logging
   const getCurrentSubQuery = `
-    SELECT s.*, bp.name as old_plan_name 
+    SELECT s.*, bp.name as old_plan_name
     FROM subscriptions s
     LEFT JOIN billing_plans bp ON s.plan_id = bp.id
     WHERE s.company_id = 1 AND s.status IN ('active', 'inactive')
     ORDER BY s.created_at DESC
     LIMIT 1
   `;
-  
+
   db.query(getCurrentSubQuery, (err, currentSub) => {
     if (err) {
       logger.error('Error getting current subscription:', err);
-      return res.status(500).json({ 
+      return res.status(500).json({
         error: 'Error al obtener la suscripción actual',
-        success: false 
+        success: false
       });
     }
-    
+
     const updateQuery = `
-      UPDATE subscriptions 
+      UPDATE subscriptions
       SET plan_id = ?, updated_at = NOW()
       WHERE company_id = 1 AND status IN ('active', 'inactive')
     `;
-    
+
     db.query(updateQuery, [planId], (err, result) => {
       if (err) {
         logger.error('Error updating subscription plan:', err);
-        return res.status(500).json({ 
+        return res.status(500).json({
           error: 'Error al cambiar el plan',
-          success: false 
+          success: false
         });
       }
-      
+
       if (result.affectedRows === 0) {
-        return res.status(400).json({ 
+        return res.status(400).json({
           error: 'No se encontró suscripción activa para actualizar',
-          success: false 
+          success: false
         });
       }
-      
+
       // Mark activation code as used if provided
       if (activationCode) {
         const markUsedQuery = 'UPDATE activation_codes SET status = "used", used_at = NOW(), used_by = 1, company_id = 1 WHERE code = ?';
@@ -2999,7 +2999,7 @@ function updateSubscriptionPlan(planId, res, activationCode = null, planInfo = n
           }
         });
       }
-      
+
       // Log the successful plan change
       const logData = {
         company_id: 1,
@@ -3008,11 +3008,11 @@ function updateSubscriptionPlan(planId, res, activationCode = null, planInfo = n
         activation_code_used: !!activationCode,
         changed_at: new Date().toISOString()
       };
-      
+
       logger.info('Plan changed successfully:', logData);
-      
-      res.json({ 
-        success: true, 
+
+      res.json({
+        success: true,
         message: `Plan cambiado exitosamente a ${planInfo?.name || 'nuevo plan'}`,
         data: {
           new_plan_id: planId,
@@ -3028,21 +3028,21 @@ function updateSubscriptionPlan(planId, res, activationCode = null, planInfo = n
 // POST suspend subscription
 app.post('/api/billing/suspend-subscription', (req, res) => {
   const query = `
-    UPDATE subscriptions 
+    UPDATE subscriptions
     SET status = 'suspended', updated_at = NOW()
     WHERE company_id = 1 AND status = 'active'
   `;
-  
+
   db.query(query, (err, result) => {
     if (err) {
       logger.error('Error suspending subscription:', err);
       return res.status(500).json({ error: 'Error al suspender la suscripción' });
     }
-    
+
     if (result.affectedRows === 0) {
       return res.status(400).json({ error: 'No se encontró suscripción activa' });
     }
-    
+
     res.json({ success: true, message: 'Suscripción suspendida exitosamente' });
   });
 });
@@ -3050,21 +3050,21 @@ app.post('/api/billing/suspend-subscription', (req, res) => {
 // POST reactivate subscription
 app.post('/api/billing/reactivate-subscription', (req, res) => {
   const query = `
-    UPDATE subscriptions 
+    UPDATE subscriptions
     SET status = 'active', updated_at = NOW()
     WHERE company_id = 1 AND status = 'suspended'
   `;
-  
+
   db.query(query, (err, result) => {
     if (err) {
       logger.error('Error reactivating subscription:', err);
       return res.status(500).json({ error: 'Error al reactivar la suscripción' });
     }
-    
+
     if (result.affectedRows === 0) {
       return res.status(400).json({ error: 'No se encontró suscripción suspendida' });
     }
-    
+
     res.json({ success: true, message: 'Suscripción reactivada exitosamente' });
   });
 });
@@ -3072,22 +3072,22 @@ app.post('/api/billing/reactivate-subscription', (req, res) => {
 // GET download invoice
 app.get('/api/billing/download-invoice/:id', (req, res) => {
   const { id } = req.params;
-  
+
   const query = 'SELECT * FROM invoices WHERE id = ? AND company_id = 1';
-  
+
   db.query(query, [id], (err, results) => {
     if (err) {
       logger.error('Error fetching invoice:', err);
       return res.status(500).json({ error: 'Error al obtener la factura' });
     }
-    
+
     if (results.length === 0) {
       return res.status(404).json({ error: 'Factura no encontrada' });
     }
-    
+
     // In a real implementation, you would generate and return a PDF
     // For now, return the invoice data as JSON
-    res.json({ 
+    res.json({
       message: 'Funcionalidad de descarga en desarrollo',
       invoice: results[0]
     });
@@ -3100,11 +3100,11 @@ app.get('/api/billing/plan-usage', (req, res) => {
 
   // First, get the current subscription and plan
   const subscriptionQuery = `
-    SELECT s.*, p.name as plan_name, p.features 
-    FROM subscriptions s 
-    JOIN plans p ON s.plan_id = p.id 
+    SELECT s.*, p.name as plan_name, p.features
+    FROM subscriptions s
+    JOIN plans p ON s.plan_id = p.id
     WHERE s.company_id = 1 AND s.status = 'active'
-    ORDER BY s.created_at DESC 
+    ORDER BY s.created_at DESC
     LIMIT 1
   `;
 
@@ -3196,8 +3196,8 @@ app.get('/api/billing/plan-usage', (req, res) => {
     let planFeatures;
 
     try {
-      planFeatures = typeof subscription.features === 'string' 
-        ? JSON.parse(subscription.features) 
+      planFeatures = typeof subscription.features === 'string'
+        ? JSON.parse(subscription.features)
         : subscription.features;
     } catch (parseErr) {
       logger.error('Error parsing plan features:', parseErr);
@@ -3212,22 +3212,22 @@ app.get('/api/billing/plan-usage', (req, res) => {
     // Get current usage from different tables
     const usageQueries = [
       // Count appointments this month
-      `SELECT COUNT(*) as count FROM appointments 
-       WHERE company_id = 1 AND MONTH(appointment_date) = MONTH(CURRENT_DATE()) 
+      `SELECT COUNT(*) as count FROM appointments
+       WHERE company_id = 1 AND MONTH(appointment_date) = MONTH(CURRENT_DATE())
        AND YEAR(appointment_date) = YEAR(CURRENT_DATE())`,
-      
+
       // Count total clients
       `SELECT COUNT(*) as count FROM clients WHERE company_id = 1`,
-      
+
       // Count active staff
       `SELECT COUNT(*) as count FROM users WHERE company_id = 1 AND status = 'active'`,
-      
+
       // Calculate storage usage (mock for now)
       `SELECT 0.4 as storage_used`
     ];
 
     Promise.all(
-      usageQueries.map(query => 
+      usageQueries.map(query =>
         new Promise((resolve, reject) => {
           db.query(query, (err, results) => {
             if (err) {
@@ -3257,7 +3257,7 @@ app.get('/api/billing/plan-usage', (req, res) => {
 
       // Generate alerts based on usage
       const alerts = [];
-      
+
       if (usagePercentages.appointments >= 80) {
         const remaining = planFeatures.max_appointments - currentUsage.appointments;
         alerts.push({
@@ -3298,7 +3298,7 @@ app.get('/api/billing/plan-usage', (req, res) => {
 
       // Generate recommendations
       const recommendations = [];
-      
+
       const highUsageResources = Object.entries(usagePercentages)
         .filter(([_, percentage]) => percentage >= 75)
         .map(([resource]) => resource);
@@ -3308,7 +3308,7 @@ app.get('/api/billing/plan-usage', (req, res) => {
           type: 'upgrade',
           message: 'Considera actualizar tu plan para obtener más recursos',
           suggestedPlan: subscription.plan_name === 'Plan Básico' ? 'Plan Professional' : 'Plan Enterprise',
-          benefits: subscription.plan_name === 'Plan Básico' 
+          benefits: subscription.plan_name === 'Plan Básico'
             ? ['300 citas mensuales', '150 clientes', '10 miembros del staff', '5GB de almacenamiento']
             : ['Citas ilimitadas', '500 clientes', '25 miembros del staff', '20GB de almacenamiento']
         });
@@ -3357,7 +3357,7 @@ app.get('/api/appointments/stats', (req, res) => {
   });
 
   try {    const query = `
-      SELECT 
+      SELECT
         DATE(a.date) as date,
         COUNT(*) as total_appointments,
         SUM(CASE WHEN a.status = 'completed' THEN 1 ELSE 0 END) as completed,
@@ -3366,7 +3366,7 @@ app.get('/api/appointments/stats', (req, res) => {
         COALESCE(SUM(CASE WHEN a.status = 'completed' THEN s.price ELSE 0 END), 0) as total_revenue
       FROM appointments a
       JOIN services s ON a.service_id = s.id
-      WHERE a.company_id = ? 
+      WHERE a.company_id = ?
         AND a.date BETWEEN ? AND ?
       GROUP BY DATE(a.date)
       ORDER BY DATE(a.date)
@@ -3390,6 +3390,18 @@ app.get('/api/appointments/stats', (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 });
+
+// Importar controlador de pagos
+const pagosController = require('./controllers/pagos.controller');
+
+// Rutas para gesti�n de pagos
+app.get('/api/pagos', pagosController.getAllPagos);
+app.get('/api/pagos/estadisticas', pagosController.getEstadisticasPagos);
+app.get('/api/pagos/factura/:id', pagosController.getDetalleFactura);
+app.post('/api/pagos/procesar', pagosController.procesarPago);
+app.get('/api/pagos/reportes', pagosController.generarReporte);
+app.get('/api/pagos/metodos-pago', pagosController.getMetodosPago);
+app.post('/api/pagos/:id/anular', pagosController.anularPago);
 
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {

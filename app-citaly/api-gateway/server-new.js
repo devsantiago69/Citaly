@@ -7,9 +7,18 @@ const { requestLogger, errorHandler } = require('./middlewares/auth');
 const socketManager = require('./config/socket');
 const webhookManager = require('./config/webhooks');
 
-// Importar rutas
+// Importar rutas principales
 const citasRoutes = require('./routes/citas.routes');
+const citasNewRoutes = require('./routes/citas-new.routes');
 const usuariosRoutes = require('./routes/usuarios.routes');
+
+// Importar nuevas rutas para la estructura actualizada
+const sucursalesRoutes = require('./routes/sucursales.routes');
+const cajasRoutes = require('./routes/cajas.routes');
+const clientesRoutes = require('./routes/clientes.routes');
+const personalRoutes = require('./routes/personal.routes');
+const facturacionRoutes = require('./routes/facturacion.routes');
+const serviciosNewRoutes = require('./routes/servicios-new.routes');
 
 const app = express();
 const server = http.createServer(app);
@@ -43,8 +52,8 @@ logger.info('Initializing server', {
 // Ruta de salud del servidor
 app.get('/', (req, res) => {
   res.json({
-    message: 'Citaly API Gateway - Backend server is running',
-    version: '2.0.0',
+    message: 'Citaly API Gateway - Backend server is running (Nueva Estructura BD)',
+    version: '3.0.0',
     timestamp: new Date().toISOString(),
     timezone: config.TIMEZONE
   });
@@ -63,13 +72,40 @@ app.get('/health', (req, res) => {
 
 // ===== RUTAS PRINCIPALES =====
 
-// Rutas de citas/appointments
+// ===== RUTAS DE LA NUEVA ESTRUCTURA =====
+
+// Rutas de sucursales
+app.use('/api/sucursales', sucursalesRoutes);
+
+// Rutas de cajas y sesiones de caja
+app.use('/api/cajas', cajasRoutes);
+
+// Rutas de clientes (nueva estructura)
+app.use('/api/clientes', clientesRoutes);
+
+// Rutas de personal (nueva estructura)
+app.use('/api/personal', personalRoutes);
+
+// Rutas de facturación y suscripciones
+app.use('/api/facturacion', facturacionRoutes);
+
+// Rutas de citas (nueva estructura)
+app.use('/api/citas-new', citasNewRoutes);
+
+// Rutas de servicios (nueva estructura)
+app.use('/api/servicios-new', serviciosNewRoutes);
+
+// ===== RUTAS EXISTENTES (COMPATIBILIDAD) =====
+
+// Rutas de citas/appointments (compatibilidad)
 app.use('/api/appointments', citasRoutes);
 
 // Rutas de usuarios (clientes, staff, admins)
 app.use('/api', usuariosRoutes);
 
-// Rutas de servicios
+// ===== RUTAS DE SISTEMA Y UTILIDADES =====
+
+// Rutas de servicios (estructura antigua)
 const serviciosRoutes = require('./routes/servicios.routes');
 app.use('/api/services', serviciosRoutes);
 
@@ -101,8 +137,27 @@ app.use('/api', realtimeRoutes);
 const staffSpecialtyRoutes = require('./routes/staffSpecialty.routes');
 app.use('/api/staff', staffSpecialtyRoutes);
 
-// ===== TODAS LAS RUTAS HAN SIDO MIGRADAS A CONTROLADORES =====
-// Todas las rutas están ahora organizadas en módulos específicos
+// ===== TODAS LAS RUTAS HAN SIDO MIGRADAS Y ACTUALIZADAS =====
+//
+// RUTAS DE LA NUEVA ESTRUCTURA (v3.0.0):
+// - /api/sucursales         - Gestión de sucursales (CRUD, asignaciones)
+// - /api/cajas             - Gestión de cajas y sesiones de caja (abrir, cerrar, movimientos)
+// - /api/clientes          - Gestión de clientes (nueva estructura con suscripciones)
+// - /api/personal          - Gestión de personal (staff con especialidades y roles)
+// - /api/facturacion       - Sistema de facturación y suscripciones completo
+// - /api/citas-new         - Sistema de citas con nueva estructura (sucursales, personal, etc.)
+// - /api/servicios-new     - Servicios con categorías y precios por sucursal
+//
+// RUTAS DE COMPATIBILIDAD (mantenidas para transición):
+// - /api/appointments      - Citas (estructura antigua)
+// - /api/users            - Usuarios (estructura antigua)
+// - /api/services         - Servicios (estructura antigua)
+// - /api/specialties      - Especialidades
+// - /api/reports          - Reportes y estadísticas
+// - /api/user-types       - Tipos de usuario
+// - /api/staff            - Especialidades del personal
+//
+// Rutas existentes mantenidas para compatibilidad: appointments, users, services, specialties, reports, etc.
 
 // ===== MANEJO DE ERRORES =====
 
