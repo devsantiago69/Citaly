@@ -1,31 +1,27 @@
-const { db } = require('../config/db');
+const db = require('../config/db');
 const logger = require('../logger');
 
-// GET todos los servicios
+// GET todos los servicios reales (adaptado a la base de datos en español)
 const getServicios = async (req, res) => {
   try {
-    logger.info('GET /api/services - Request received', {
-      origin: req.get('origin'),
-      headers: req.headers
-    });
-
-    const query = `
-      SELECT s.*, sc.name as category
-      FROM services s
-      LEFT JOIN service_categories sc ON s.category_id = sc.id
-      WHERE s.company_id = ?
-    `;
-
-    db.query(query, [req.companyId], (err, results) => {
-      if (err) {
-        logger.error('Error fetching services:', err);
-        return res.status(500).json({ error: err.message });
-      }
-      res.json(results);
-    });
+    const empresa_id = req.companyId || req.params.empresa_id || req.query.empresa_id;
+    if (!empresa_id) {
+      logger.error('Falta el parámetro empresa_id en getServicios');
+      return res.status(400).json({ error: 'Falta el parámetro empresa_id' });
+    }
+    logger.info('Consultando servicios para empresa_id:', empresa_id);
+    const [rows] = await db.execute(`
+      SELECT s.id, s.nombre AS name, cs.nombre AS category, s.duracion AS duration, s.precio AS price
+      FROM servicios s
+      LEFT JOIN categorias_servicio cs ON s.categoria_id = cs.id
+      WHERE s.empresa_id = ? AND s.estado = 'Activo'
+      ORDER BY s.nombre ASC
+    `, [empresa_id]);
+    logger.info('Respuesta de servicios:', rows);
+    res.json(rows);
   } catch (error) {
-    logger.error('Error in getServicios:', error);
-    res.status(500).json({ error: 'Error interno del servidor' });
+    logger.error('Error en getServicios:', error);
+    res.status(500).json({ error: 'Error al obtener servicios', details: error.message });
   }
 };
 

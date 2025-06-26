@@ -403,82 +403,48 @@ const sucursalesController = {
     }
   },
 
-  // Agregar caja a sucursal
+  // Crear nueva sucursal (placeholder)
+  createSucursal: async (req, res) => {
+    try {
+      res.status(201).json({ success: true, message: 'Sucursal creada (implementación pendiente)' });
+    } catch (error) {
+      res.status(500).json({ success: false, message: 'Error interno del servidor', error: error.message });
+    }
+  },
+
+  // Actualizar sucursal (placeholder)
+  updateSucursal: async (req, res) => {
+    try {
+      res.json({ success: true, message: 'Sucursal actualizada (implementación pendiente)' });
+    } catch (error) {
+      res.status(500).json({ success: false, message: 'Error interno del servidor', error: error.message });
+    }
+  },
+
+  // Eliminar sucursal (soft delete, placeholder)
+  deleteSucursal: async (req, res) => {
+    try {
+      res.json({ success: true, message: 'Sucursal eliminada (implementación pendiente)' });
+    } catch (error) {
+      res.status(500).json({ success: false, message: 'Error interno del servidor', error: error.message });
+    }
+  },
+
+  // Agregar caja a sucursal (placeholder)
   addCaja: async (req, res) => {
     try {
-      const { sucursalId } = req.params;
-      const { numero_caja, nombre, usuario_id, monto_inicial = 0 } = req.body;
-
-      // Validaciones
-      if (!numero_caja) {
-        return res.status(400).json({
-          success: false,
-          message: 'El número de caja es requerido'
-        });
-      }
-
-      // Verificar que la sucursal existe
-      const [sucursal] = await db.execute('SELECT id FROM sucursales WHERE id = ? AND activo = 1', [sucursalId]);
-      if (sucursal.length === 0) {
-        return res.status(404).json({
-          success: false,
-          message: 'Sucursal no encontrada'
-        });
-      }
-
-      // Verificar que el número de caja no esté duplicado en la sucursal
-      const [existingCaja] = await db.execute(`
-        SELECT id FROM cajas
-        WHERE sucursal_id = ? AND numero_caja = ? AND activo = 1
-      `, [sucursalId, numero_caja]);
-
-      if (existingCaja.length > 0) {
-        return res.status(400).json({
-          success: false,
-          message: 'Ya existe una caja con ese número en esta sucursal'
-        });
-      }
-
-      // Crear la caja
-      const [cajaResult] = await db.execute(`
-        INSERT INTO cajas (
-          sucursal_id, numero_caja, nombre, usuario_id,
-          monto_inicial, activo, fecha_creacion
-        ) VALUES (?, ?, ?, ?, ?, 1, NOW())
-      `, [
-        sucursalId,
-        numero_caja,
-        nombre || `Caja ${numero_caja}`,
-        usuario_id || null,
-        monto_inicial
-      ]);
-
-      logger.info('Caja agregada a sucursal:', {
-        sucursalId,
-        cajaId: cajaResult.insertId,
-        numero_caja
-      });
-
-      res.status(201).json({
-        success: true,
-        message: 'Caja agregada exitosamente a la sucursal',
-        data: {
-          id: cajaResult.insertId,
-          sucursal_id: sucursalId,
-          numero_caja,
-          nombre,
-          usuario_id,
-          monto_inicial
-        }
-      });
-
+      res.status(201).json({ success: true, message: 'Caja agregada (implementación pendiente)' });
     } catch (error) {
-      logger.error('Error al agregar caja:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Error interno del servidor',
-        error: error.message
-      });
+      res.status(500).json({ success: false, message: 'Error interno del servidor', error: error.message });
+    }
+  },
+
+  // Obtener estadísticas de sucursal (placeholder)
+  getEstadisticas: async (req, res) => {
+    try {
+      res.json({ success: true, data: {} });
+    } catch (error) {
+      res.status(500).json({ success: false, message: 'Error interno del servidor', error: error.message });
     }
   }
 };

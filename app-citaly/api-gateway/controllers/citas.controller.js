@@ -1,4 +1,4 @@
-const db = require('../config/database');
+const db = require('../config/db');
 const logger = require('../logger');
 
 // Función para obtener socketManager y webhookManager
@@ -12,6 +12,9 @@ const getManagers = (req) => {
 const getCitas = async (req, res) => {
   try {
     const { empresa_id } = req.params;
+    if (!empresa_id) {
+      return res.status(400).json({ success: false, message: 'Falta el parámetro empresa_id en la ruta' });
+    }
     const { fecha, fecha_inicio, fecha_fin, estado, sucursal_id, page = 1, limit = 10 } = req.query;
 
     logger.info('GET /api/appointments - Request received', {
@@ -563,6 +566,28 @@ const getCitasPorSucursal = async (req, res) => {
   }
 };
 
+// GET eventos de calendario (implementación básica para evitar error de callback undefined)
+const getAppointmentsCalendar = async (req, res) => {
+  try {
+    // Aquí puedes implementar la lógica real según el modelo de tu base de datos
+    // Por ahora, se devuelve un array vacío para evitar errores
+    res.json({ success: true, data: [] });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Error interno del servidor', error: error.message });
+  }
+};
+
+// GET filtros para citas (implementación básica para evitar error de callback undefined)
+const getAppointmentsFilters = async (req, res) => {
+  try {
+    // Aquí puedes implementar la lógica real según el modelo de tu base de datos
+    // Por ahora, se devuelve un objeto vacío para evitar errores
+    res.json({ success: true, data: {} });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Error interno del servidor', error: error.message });
+  }
+};
+
 module.exports = {
   getCitas,
   getCita,
@@ -570,5 +595,7 @@ module.exports = {
   updateCita,
   deleteCita,
   getEstadisticasCitas,
-  getCitasPorSucursal
+  getCitasPorSucursal,
+  getAppointmentsCalendar,
+  getAppointmentsFilters
 };

@@ -1,4 +1,4 @@
-const db = require('../config/database');
+const db = require('../config/db');
 
 // Obtener todas las cajas de una sucursal
 const getCajas = async (req, res) => {

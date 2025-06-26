@@ -1,4 +1,4 @@
-const db = require('../config/database');
+const db = require('../config/db');
 const logger = require('../logger');
 
 // GET todos los servicios de una empresa

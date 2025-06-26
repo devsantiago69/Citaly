@@ -1,4 +1,4 @@
-const db = require('../config/database');
+const db = require('../config/db');
 
 // Obtener todo el personal de una empresa
 const getPersonal = async (req, res) => {

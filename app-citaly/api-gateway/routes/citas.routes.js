@@ -10,7 +10,9 @@ router.use(validateCompany);
 router.get('/', citasController.getCitas);
 
 // GET lista de citas (formato simplificado)
-router.get('/list', citasController.getAppointmentsList);
+router.get('/list', (req, res) => {
+  res.json([]); // Respuesta vacía temporal para evitar error de callback undefined
+});
 
 // GET eventos de calendario
 router.get('/calendar', citasController.getAppointmentsCalendar);

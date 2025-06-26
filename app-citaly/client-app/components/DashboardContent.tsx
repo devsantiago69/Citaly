@@ -108,7 +108,7 @@ const DashboardContent = () => {
     completionRate: 0,
     averageServiceTime: 0
   });
-    // Filtros globales con estado mejorado
+  // Filtros globales con estado mejorado
   const [filters, setFilters] = useState<DashboardFilters>({
     dateRange: {
       from: startOfMonth(new Date()),
@@ -151,7 +151,7 @@ const DashboardContent = () => {
 
     return params;
   }, [filters]);
-  // Función mejorada para filtrar datos localmente
+  // Funciï¿½n mejorada para filtrar datos localmente
   const filterLocalData = useCallback((data: Appointment[], dateField: string = 'date') => {
     if (!Array.isArray(data)) return [];
 
@@ -170,7 +170,7 @@ const DashboardContent = () => {
     });
   }, [filters]);
 
-  // Función para obtener todos los servicios
+  // Funciï¿½n para obtener todos los servicios
   const fetchServices = async () => {
     try {
       const services = await apiService.services.list();
@@ -182,14 +182,14 @@ const DashboardContent = () => {
     }
   };
 
-  // Función para obtener citas próximas (sin filtros)
+  // Funciï¿½n para obtener citas prï¿½ximas (sin filtros)
   const fetchUpcomingAppointments = async () => {
     try {
       const today = format(new Date(), 'yyyy-MM-dd');
       let appointments = [];
 
       try {
-        // Intentar obtener citas específicas del día
+        // Intentar obtener citas especï¿½ficas del dï¿½a
         appointments = await apiService.appointments.list({ date: today, status: 'scheduled,confirmed' });
       } catch {
         // Si falla, obtener todas las citas y filtrar
@@ -274,7 +274,7 @@ const DashboardContent = () => {
 
     } catch (error) {
       console.error('? Error al cargar datos del dashboard:', error);
-      setError('Error al cargar los datos del dashboard. Intenta actualizar la página.');
+      setError('Error al cargar los datos del dashboard. Intenta actualizar la pï¿½gina.');
       toast.error('Error al cargar los datos del dashboard');
     } finally {
       setLoading(false);
@@ -403,7 +403,7 @@ const DashboardContent = () => {
 
   useEffect(() => {
     const unsubscribeStatsUpdate = subscribeToEvent?.('dashboard_stats_updated', (data: unknown) => {
-      console.log('?? Estadísticas actualizadas en tiempo real:', data);
+      console.log('?? Estadï¿½sticas actualizadas en tiempo real:', data);
       // Refrescar datos del dashboard
       fetchFilteredData();
     });

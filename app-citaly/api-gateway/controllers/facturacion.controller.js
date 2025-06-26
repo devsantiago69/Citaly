@@ -1,4 +1,4 @@
-const db = require('../config/database');
+const db = require('../config/db');
 
 // Obtener todos los planes de facturación
 const getPlanes = async (req, res) => {
