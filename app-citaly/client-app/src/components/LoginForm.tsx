@@ -1,25 +1,55 @@
-
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Eye, EyeOff, Building } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useAuth } from '@/contexts/AuthContext';
+import { Button } from './ui/button';
+import { Input } from './ui/input';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
+import { useAuth } from '../hooks/useAuth';
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 
 const LoginForm = () => {
+  const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
-  const { login, isLoading } = useAuth();
+  const { login, isLoading, user } = useAuth();
+
+  useEffect(() => {
+    console.log("?? LoginForm - Estado de autenticaciï¿½n:", {
+      isLoading,
+      isAuthenticated: !!user,
+      user: user ? `${user.name} (${user.email})` : 'No autenticado'
+    });
+
+    // Si el usuario ya estï¿½ autenticado y no estï¿½ cargando, redirigir al dashboard
+    if (user && !isLoading) {
+      console.log("?? Usuario ya autenticado, redirigiendo al dashboard");
+      navigate('/');
+    }
+  }, [user, navigate, isLoading]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    
-    const success = await login(email, password);
-    if (!success) {
-      setError('Credenciales incorrectas. Usa: admin@citaflorecer.com / admin123');
+
+    console.log("?? Intentando iniciar sesión con:", email);
+    try {
+      const success = await login(email, password);
+      console.log("?? Resultado del login:", success ? "Exitoso" : "Fallido");
+
+      if (success) {
+        toast.success(`¡Bienvenido de nuevo!`);
+        console.log("?? Redirigiendo al usuario al dashboard");
+
+        // Forzar la redirección utilizando window.location para un reinicio completo
+        window.location.href = '/';
+      } else {
+        setError('Credenciales incorrectas. Por favor verifica tu usuario y contraseña.');
+      }
+    } catch (err) {
+      console.error("Error durante el inicio de sesión:", err);
+      setError('Ha ocurrido un error al intentar iniciar sesión. Por favor intenta nuevamente.');
     }
   };
 
@@ -38,7 +68,7 @@ const LoginForm = () => {
               Sistema de GestiÃ³n de Citas
             </CardDescription>
           </CardHeader>
-          
+
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="space-y-4">
@@ -56,7 +86,7 @@ const LoginForm = () => {
                     className="h-12"
                   />
                 </div>
-                
+
                 <div>
                   <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
                     ContraseÃ±a
@@ -88,8 +118,8 @@ const LoginForm = () => {
                 </div>
               )}
 
-              <Button 
-                type="submit" 
+              <Button
+                type="submit"
                 className="w-full h-12 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
                 disabled={isLoading}
               >
@@ -99,9 +129,9 @@ const LoginForm = () => {
 
             <div className="mt-6 p-4 bg-gray-50 rounded-lg">
               <p className="text-xs text-gray-600 text-center">
-                <strong>Credenciales de prueba:</strong><br />
-                Email: admin@citaflorecer.com<br />
-                ContraseÃ±a: admin123
+                <strong>Developer</strong><br />
+                Email: admin@citaly.com<br />
+                ---------
               </p>
             </div>
           </CardContent>

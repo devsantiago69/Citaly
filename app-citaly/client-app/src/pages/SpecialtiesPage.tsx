@@ -1,4 +1,4 @@
-import SpecialtyManagement from "@/components/SpecialtyManagement";
+import SpecialtyManagement from "../components/SpecialtyManagement";
 
 const SpecialtiesPage = () => {
   return (

@@ -4,11 +4,11 @@ const logger = require('../logger');
 // GET todos los servicios de una empresa
 const getServicios = async (req, res) => {
   try {
-    const { empresa_id } = req.params;
+    const { company_id } = req.user;
     const { categoria_id, estado, sucursal_id, page = 1, limit = 20 } = req.query;
 
     logger.info('GET /api/services - Request received', {
-      empresa_id,
+      company_id,
       categoria_id,
       estado,
       sucursal_id
@@ -17,7 +17,7 @@ const getServicios = async (req, res) => {
     const offset = (page - 1) * limit;
 
     let whereClause = 'WHERE s.empresa_id = ?';
-    const queryParams = [empresa_id];
+    const queryParams = [company_id];
 
     if (categoria_id) {
       whereClause += ' AND s.categoria_id = ?';
@@ -93,6 +93,7 @@ const getServicios = async (req, res) => {
 const getServicio = async (req, res) => {
   try {
     const { id } = req.params;
+    const { company_id } = req.user;
 
     const [servicio] = await db.execute(`
       SELECT
@@ -107,8 +108,8 @@ const getServicio = async (req, res) => {
       LEFT JOIN empresas e ON s.empresa_id = e.id
       LEFT JOIN usuarios uc ON s.creado_por = uc.id
       LEFT JOIN usuarios ua ON s.actualizado_por = ua.id
-      WHERE s.id = ?
-    `, [id]);
+      WHERE s.id = ? AND s.empresa_id = ?
+    `, [id, company_id]);
 
     if (servicio.length === 0) {
       return res.status(404).json({
@@ -165,34 +166,22 @@ const getServicio = async (req, res) => {
 // POST crear nuevo servicio
 const createServicio = async (req, res) => {
   try {
-    const {
-      empresa_id, categoria_id, nombre, descripcion, duracion, precio
-    } = req.body;
-
-    const creado_por = req.user?.id || 1;
+    const { category_id, nombre, descripcion, duracion, precio } = req.body;
+    const { company_id, id: creado_por } = req.user;
 
     // Validaciones básicas
-    if (!empresa_id || !nombre || !duracion || !precio) {
+    if (!nombre || !duracion || !precio) {
       return res.status(400).json({
         success: false,
-        message: 'Los campos empresa_id, nombre, duracion y precio son requeridos'
-      });
-    }
-
-    // Verificar que la empresa existe
-    const [empresa] = await db.execute('SELECT id FROM empresas WHERE id = ?', [empresa_id]);
-    if (empresa.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: 'Empresa no encontrada'
+        message: 'Los campos nombre, duracion y precio son requeridos'
       });
     }
 
     // Verificar que la categoría existe (si se proporciona)
-    if (categoria_id) {
+    if (category_id) {
       const [categoria] = await db.execute(
         'SELECT id FROM categorias_servicio WHERE id = ? AND empresa_id = ?',
-        [categoria_id, empresa_id]
+        [category_id, company_id]
       );
       if (categoria.length === 0) {
         return res.status(404).json({
@@ -205,7 +194,7 @@ const createServicio = async (req, res) => {
     const [result] = await db.execute(`
       INSERT INTO servicios (empresa_id, categoria_id, nombre, descripcion, duracion, precio, creado_por)
       VALUES (?, ?, ?, ?, ?, ?, ?)
-    `, [empresa_id, categoria_id, nombre, descripcion, duracion, precio, creado_por]);
+    `, [company_id, category_id, nombre, descripcion, duracion, precio, creado_por]);
 
     res.status(201).json({
       success: true,
@@ -232,10 +221,10 @@ const updateServicio = async (req, res) => {
   try {
     const { id } = req.params;
     const { categoria_id, nombre, descripcion, duracion, precio, estado } = req.body;
-    const actualizado_por = req.user?.id || 1;
+    const { company_id, id: actualizado_por } = req.user;
 
-    // Verificar que el servicio existe
-    const [existingServicio] = await db.execute('SELECT * FROM servicios WHERE id = ?', [id]);
+    // Verificar que el servicio existe y pertenece a la empresa del usuario
+    const [existingServicio] = await db.execute('SELECT * FROM servicios WHERE id = ? AND empresa_id = ?', [id, company_id]);
     if (existingServicio.length === 0) {
       return res.status(404).json({
         success: false,
@@ -247,7 +236,7 @@ const updateServicio = async (req, res) => {
     if (categoria_id) {
       const [categoria] = await db.execute(
         'SELECT id FROM categorias_servicio WHERE id = ? AND empresa_id = ?',
-        [categoria_id, existingServicio[0].empresa_id]
+        [categoria_id, company_id]
       );
       if (categoria.length === 0) {
         return res.status(404).json({
@@ -295,10 +284,10 @@ const updateServicio = async (req, res) => {
 const deleteServicio = async (req, res) => {
   try {
     const { id } = req.params;
-    const actualizado_por = req.user?.id || 1;
+    const { company_id, id: actualizado_por } = req.user;
 
-    // Verificar que el servicio existe
-    const [existingServicio] = await db.execute('SELECT id FROM servicios WHERE id = ?', [id]);
+    // Verificar que el servicio existe y pertenece a la empresa del usuario
+    const [existingServicio] = await db.execute('SELECT id FROM servicios WHERE id = ? AND empresa_id = ?', [id, company_id]);
     if (existingServicio.length === 0) {
       return res.status(404).json({
         success: false,
@@ -343,7 +332,25 @@ const deleteServicio = async (req, res) => {
 const asignarServicioASucursal = async (req, res) => {
   try {
     const { servicio_id, sucursal_id, precio } = req.body;
-    const creado_por = req.user?.id || 1;
+    const { company_id, id: creado_por } = req.user;
+
+    // Verificar que el servicio pertenece a la empresa del usuario
+    const [servicio] = await db.execute('SELECT id FROM servicios WHERE id = ? AND empresa_id = ?', [servicio_id, company_id]);
+    if (servicio.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Servicio no encontrado o no pertenece a su empresa'
+      });
+    }
+
+    // Verificar que la sucursal pertenece a la empresa del usuario
+    const [sucursal] = await db.execute('SELECT id FROM sucursales WHERE id = ? AND empresa_id = ?', [sucursal_id, company_id]);
+    if (sucursal.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Sucursal no encontrada o no pertenece a su empresa'
+      });
+    }
 
     // Verificar que no existe la asignación
     const [existing] = await db.execute(
@@ -382,7 +389,25 @@ const actualizarPrecioEnSucursal = async (req, res) => {
   try {
     const { servicio_id, sucursal_id } = req.params;
     const { precio } = req.body;
-    const actualizado_por = req.user?.id || 1;
+    const { company_id, id: actualizado_por } = req.user;
+
+    // Verificar que el servicio pertenece a la empresa del usuario
+    const [servicio] = await db.execute('SELECT id FROM servicios WHERE id = ? AND empresa_id = ?', [servicio_id, company_id]);
+    if (servicio.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Servicio no encontrado o no pertenece a su empresa'
+      });
+    }
+
+    // Verificar que la sucursal pertenece a la empresa del usuario
+    const [sucursal] = await db.execute('SELECT id FROM sucursales WHERE id = ? AND empresa_id = ?', [sucursal_id, company_id]);
+    if (sucursal.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Sucursal no encontrada o no pertenece a su empresa'
+      });
+    }
 
     const [result] = await db.execute(`
       UPDATE servicios_sucursal
@@ -414,7 +439,7 @@ const actualizarPrecioEnSucursal = async (req, res) => {
 // GET categorías de servicio
 const getCategorias = async (req, res) => {
   try {
-    const { empresa_id } = req.params;
+    const { company_id } = req.user;
 
     const [categorias] = await db.execute(`
       SELECT
@@ -425,7 +450,7 @@ const getCategorias = async (req, res) => {
       LEFT JOIN usuarios uc ON cs.creado_por = uc.id
       WHERE cs.empresa_id = ?
       ORDER BY cs.nombre
-    `, [empresa_id]);
+    `, [company_id]);
 
     res.json({
       success: true,
@@ -444,20 +469,20 @@ const getCategorias = async (req, res) => {
 // POST crear categoría
 const createCategoria = async (req, res) => {
   try {
-    const { empresa_id, nombre, descripcion } = req.body;
-    const creado_por = req.user?.id || 1;
+    const { nombre, descripcion } = req.body;
+    const { company_id, id: creado_por } = req.user;
 
-    if (!empresa_id || !nombre) {
+    if (!nombre) {
       return res.status(400).json({
         success: false,
-        message: 'Los campos empresa_id y nombre son requeridos'
+        message: 'El campo nombre es requerido'
       });
     }
 
     const [result] = await db.execute(`
       INSERT INTO categorias_servicio (empresa_id, nombre, descripcion, creado_por)
       VALUES (?, ?, ?, ?)
-    `, [empresa_id, nombre, descripcion, creado_por]);
+    `, [company_id, nombre, descripcion, creado_por]);
 
     res.status(201).json({
       success: true,
@@ -480,7 +505,7 @@ const createCategoria = async (req, res) => {
 // GET estadísticas de servicios
 const getEstadisticasServicios = async (req, res) => {
   try {
-    const { empresa_id } = req.params;
+    const { company_id } = req.user;
 
     const [stats] = await db.execute(`
       SELECT
@@ -492,7 +517,7 @@ const getEstadisticasServicios = async (req, res) => {
         COUNT(DISTINCT categoria_id) as total_categorias
       FROM servicios
       WHERE empresa_id = ?
-    `, [empresa_id]);
+    `, [company_id]);
 
     res.json({
       success: true,

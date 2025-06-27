@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const busquedaController = require('../controllers/busqueda.controller');
-const { validateRequired } = require('../middlewares/auth');
+const { verifyToken } = require('../middlewares/auth');
 
 /**
  * Rutas para búsquedas y utilidades
@@ -9,6 +9,7 @@ const { validateRequired } = require('../middlewares/auth');
 
 // GET /api/search - Búsqueda global
 router.get('/search',
+  verifyToken,
   busquedaController.globalSearch
 );
 

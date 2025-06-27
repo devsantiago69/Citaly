@@ -11,28 +11,43 @@ const getManagers = (req) => {
 // GET todas las citas
 const getCitas = async (req, res) => {
   try {
-    const { empresa_id } = req.params;
-    if (!empresa_id) {
-      return res.status(400).json({ success: false, message: 'Falta el parámetro empresa_id en la ruta' });
-    }
-    const { fecha, fecha_inicio, fecha_fin, estado, sucursal_id, page = 1, limit = 10 } = req.query;
-
-    logger.info('GET /api/appointments - Request received', {
-      origen: req.get('origin'),
-      empresa_id,
+    const { company_id } = req.user;
+    const {
       fecha,
       fecha_inicio,
       fecha_fin,
       estado,
-      sucursal_id
+      sucursal_id,
+      page = 1,
+      limit = 10,
+      status, // Agregamos parámetro status que viene del frontend
+      date    // Agregamos parámetro date que viene del frontend
+    } = req.query;
+
+    logger.info('GET /api/appointments - Request received', {
+      origen: req.get('origin'),
+      company_id,
+      fecha,
+      fecha_inicio,
+      fecha_fin,
+      estado,
+      sucursal_id,
+      status,
+      date
     });
 
-    const offset = (page - 1) * limit;
+    const offset = (page - 1) * parseInt(limit);
 
     let whereClause = 'WHERE c.empresa_id = ?';
-    const queryParams = [empresa_id];
+    const queryParams = [company_id];
 
-    if (fecha) {
+    // Manejamos el parámetro date (fecha) del frontend
+    if (date) {
+      whereClause += ' AND c.fecha = ?';
+      queryParams.push(date);
+    }
+    // Si no hay date, usamos los parámetros tradicionales
+    else if (fecha) {
       whereClause += ' AND c.fecha = ?';
       queryParams.push(fecha);
     } else if (fecha_inicio && fecha_fin) {
@@ -40,14 +55,37 @@ const getCitas = async (req, res) => {
       queryParams.push(fecha_inicio, fecha_fin);
     }
 
-    if (estado) {
+    // Manejamos el parámetro status del frontend
+    if (status) {
+      // Si contiene comas, significa múltiples estados
+      if (status.includes(',')) {
+        const statusList = status.split(',').map(s => s.trim());
+
+        // Para MySQL, necesitamos manejar cada valor individualmente en lugar de usar IN
+        // con una lista de parámetros, ya que puede causar problemas
+        whereClause += ' AND (';
+        const statusConditions = statusList.map((_, index) => {
+          return 'c.estado = ?';
+        });
+        whereClause += statusConditions.join(' OR ');
+        whereClause += ')';
+
+        // Añadir cada valor de estado como un parámetro individual
+        statusList.forEach(s => queryParams.push(s));
+      } else {
+        whereClause += ' AND c.estado = ?';
+        queryParams.push(status);
+      }
+    }
+    // Si no hay status, usamos el parámetro tradicional
+    else if (estado) {
       whereClause += ' AND c.estado = ?';
       queryParams.push(estado);
     }
 
-    if (sucursal_id) {
+    if (sucursal_id && sucursal_id !== 'undefined' && sucursal_id !== 'null') {
       whereClause += ' AND c.sucursal_id = ?';
-      queryParams.push(sucursal_id);
+      queryParams.push(parseInt(sucursal_id));
     }
 
     const query = `
@@ -91,7 +129,10 @@ const getCitas = async (req, res) => {
       LIMIT ? OFFSET ?
     `;
 
-    const [results] = await db.execute(query, [...queryParams, parseInt(limit), offset]);
+    // Filtrar cualquier valor undefined o null de los queryParams
+    const filteredQueryParams = queryParams.filter(param => param !== undefined && param !== null);
+
+    const [results] = await db.execute(query, [...filteredQueryParams, parseInt(limit), offset]);
 
     // Obtener total de registros
     const countQuery = `
@@ -99,7 +140,7 @@ const getCitas = async (req, res) => {
       FROM citas c
       ${whereClause}
     `;
-    const [totalResults] = await db.execute(countQuery, queryParams);
+    const [totalResults] = await db.execute(countQuery, filteredQueryParams);
 
     // Formatear los resultados
     const formattedResults = results.map(cita => ({
@@ -162,6 +203,7 @@ const getCitas = async (req, res) => {
 const getCita = async (req, res) => {
   try {
     const { id } = req.params;
+    const { company_id } = req.user;
 
     const query = `
       SELECT
@@ -188,10 +230,10 @@ const getCita = async (req, res) => {
       LEFT JOIN personal p ON c.personal_id = p.id
       LEFT JOIN usuarios u ON p.usuario_id = u.id
       LEFT JOIN sucursales suc ON c.sucursal_id = suc.id
-      WHERE c.id = ?
+      WHERE c.id = ? AND c.empresa_id = ?
     `;
 
-    const [results] = await db.execute(query, [id]);
+    const [results] = await db.execute(query, [id, company_id]);
 
     if (results.length === 0) {
       return res.status(404).json({
@@ -254,29 +296,41 @@ const getCita = async (req, res) => {
 const createCita = async (req, res) => {
   try {
     const {
-      empresa_id, cliente_id, personal_id, servicio_id, sucursal_id,
+      cliente_id, personal_id, servicio_id, sucursal_id,
       fecha, hora, notas = '', canal = 'Presencial', origen = 'Presencial'
     } = req.body;
 
-    const creado_por = req.user?.id || 1;
+    const { company_id, id: creado_por } = req.user;
 
     // Validaciones básicas
-    if (!empresa_id || !cliente_id || !servicio_id || !sucursal_id || !fecha || !hora) {
+    if (!cliente_id || !servicio_id || !sucursal_id || !fecha || !hora) {
       return res.status(400).json({
         success: false,
-        message: 'Los campos empresa_id, cliente_id, servicio_id, sucursal_id, fecha y hora son requeridos'
+        message: 'Los campos cliente_id, servicio_id, sucursal_id, fecha y hora son requeridos'
       });
     }
 
     // Verificar que el cliente existe y pertenece a la empresa
     const [cliente] = await db.execute(
       'SELECT id FROM clientes WHERE id = ? AND empresa_id = ?',
-      [cliente_id, empresa_id]
+      [cliente_id, company_id]
     );
     if (cliente.length === 0) {
       return res.status(404).json({
         success: false,
         message: 'Cliente no encontrado en esta empresa'
+      });
+    }
+
+    // Verificar que la sucursal pertenece a la empresa
+    const [sucursal] = await db.execute(
+      'SELECT id FROM sucursales WHERE id = ? AND empresa_id = ?',
+      [sucursal_id, company_id]
+    );
+    if (sucursal.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Sucursal no encontrada o no pertenece a su empresa'
       });
     }
 
@@ -296,7 +350,7 @@ const createCita = async (req, res) => {
     if (personal_id) {
       const [servicioPersonal] = await db.execute(
         'SELECT * FROM servicios_personal sp JOIN personal p ON sp.personal_id = p.id WHERE sp.personal_id = ? AND sp.servicio_id = ? AND p.empresa_id = ?',
-        [personal_id, servicio_id, empresa_id]
+        [personal_id, servicio_id, company_id]
       );
       if (servicioPersonal.length === 0) {
         return res.status(400).json({

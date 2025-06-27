@@ -1,6 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const cajasController = require('../controllers/cajas.controller');
+const { verifyToken } = require('../middlewares/auth');
+
+router.use(verifyToken);
 
 // Rutas para cajas
 router.get('/sucursal/:sucursal_id', cajasController.getCajas);

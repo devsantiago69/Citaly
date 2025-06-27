@@ -1,10 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const userTypesController = require('../controllers/userTypes.controller');
-const { validateRequired, validateCompany } = require('../middlewares/auth');
+const { validateRequired, verifyToken } = require('../middlewares/auth');
 
 // Aplicar middleware de validación de company en todas las rutas
-router.use(validateCompany);
+router.use(verifyToken);
 
 // GET todos los tipos de usuario
 router.get('/', userTypesController.getUserTypes);

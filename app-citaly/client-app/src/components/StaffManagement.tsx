@@ -28,7 +28,6 @@ import {
 } from "@/components/ui/select";
 import StaffSpecialtyManagement from "./StaffSpecialtyManagement";
 import { toast } from "sonner";
-import { apiService } from "@/config/api-v2";
 
 interface Staff {
   id: number;
@@ -69,13 +68,13 @@ const StaffManagement = () => {
   // Función para resaltar texto coincidente
   const highlightMatch = (text: string, searchTerm: string) => {
     if (!searchTerm.trim()) return text;
-
+    
     const regex = new RegExp(`(${searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
     const parts = text.split(regex);
-
-    return parts.map((part, index) =>
-      regex.test(part) ?
-        <mark key={index} className="bg-yellow-200 text-yellow-900 px-0.5 rounded">{part}</mark> :
+    
+    return parts.map((part, index) => 
+      regex.test(part) ? 
+        <mark key={index} className="bg-yellow-200 text-yellow-900 px-0.5 rounded">{part}</mark> : 
         part
     );
   };
@@ -87,7 +86,7 @@ const StaffManagement = () => {
     // Filtro por texto de búsqueda (más avanzado)
     if (searchValue.trim()) {
       const searchLower = searchValue.toLowerCase();
-      filtered = filtered.filter(member =>
+      filtered = filtered.filter(member => 
         // Búsqueda en nombre
         member.name.toLowerCase().includes(searchLower) ||
         // Búsqueda en email
@@ -99,16 +98,16 @@ const StaffManagement = () => {
         // Búsqueda en horario
         member.schedule.toLowerCase().includes(searchLower) ||
         // Búsqueda en especialidades
-        (member.specialties && member.specialties.some(spec =>
+        (member.specialties && member.specialties.some(spec => 
           spec.name.toLowerCase().includes(searchLower)
         )) ||
         // Búsqueda por palabras individuales
-        searchLower.split(' ').some(word =>
+        searchLower.split(' ').some(word => 
           word.length > 1 && (
             member.name.toLowerCase().includes(word) ||
             member.email.toLowerCase().includes(word) ||
             member.role.toLowerCase().includes(word) ||
-            (member.specialties && member.specialties.some(spec =>
+            (member.specialties && member.specialties.some(spec => 
               spec.name.toLowerCase().includes(word)
             ))
           )
@@ -118,15 +117,15 @@ const StaffManagement = () => {
 
     // Filtro por estado
     if (status !== "all") {
-      filtered = filtered.filter(member =>
+      filtered = filtered.filter(member => 
         status === "active" ? member.active : !member.active
       );
     }
 
     // Filtro por especialidades
     if (specialty !== "all") {
-      filtered = filtered.filter(member =>
-        specialty === "with"
+      filtered = filtered.filter(member => 
+        specialty === "with" 
           ? (member.specialties && member.specialties.length > 0)
           : (!member.specialties || member.specialties.length === 0)
       );
@@ -187,18 +186,18 @@ const StaffManagement = () => {
   // Generar sugerencias de búsqueda
   const getSearchSuggestions = () => {
     if (!searchTerm || searchTerm.length < 2) return [];
-
+    
     const allWords = staff.flatMap(member => [
       ...member.name.toLowerCase().split(' '),
       ...member.role.toLowerCase().split(' '),
       ...member.email.toLowerCase().split(' '),
       ...(member.specialties?.flatMap(spec => spec.name.toLowerCase().split(' ')) || [])
-    ]).filter(word =>
-      word.length > 2 &&
-      word.includes(searchTerm.toLowerCase()) &&
+    ]).filter(word => 
+      word.length > 2 && 
+      word.includes(searchTerm.toLowerCase()) && 
       word !== searchTerm.toLowerCase()
     );
-
+    
     const uniqueWords = [...new Set(allWords)];
     return uniqueWords.slice(0, 5); // Máximo 5 sugerencias
   };
@@ -206,14 +205,22 @@ const StaffManagement = () => {
   useEffect(() => {
     const fetchStaff = async () => {
       try {
-        const data = await apiService.staff.list();
-
+        const response = await fetch('/api/staff');
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
+        }
+        const data = await response.json();
+        
         // Fetch specialties for each staff member
         const staffWithSpecialties = await Promise.all(
           data.map(async (member: Staff) => {
             try {
-              const specialties = await apiService.staff.specialties.list(member.id.toString());
-              return { ...member, specialties };
+              const specialtiesResponse = await fetch(`/api/staff/${member.id}/specialties`);
+              if (specialtiesResponse.ok) {
+                const specialties = await specialtiesResponse.json();
+                return { ...member, specialties };
+              }
+              return { ...member, specialties: [] };
             } catch (error) {
               console.error(`Error fetching specialties for staff ${member.id}:`, error);
               return { ...member, specialties: [] };
@@ -241,11 +248,27 @@ const StaffManagement = () => {
       return;
     }
     try {
-      const createdStaff = await apiService.staff.create(newStaff);
+      const response = await fetch('/api/staff', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(newStaff),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        toast.error(`Error al agregar empleado: ${errorData.error || 'Error desconocido'}`);
+        return;
+      }
+
+      const createdStaff = await response.json();
+      
       setStaff(prevStaff => [...prevStaff, createdStaff]);
       setNewStaff({ name: "", email: "", phone: "", role: "" });
       setIsDialogOpen(false);
       toast.success("Empleado agregado exitosamente.");
+
     } catch (error) {
       console.error('Failed to add staff:', error);
       toast.error("No se pudo conectar con el servidor para agregar al empleado.");
@@ -254,14 +277,18 @@ const StaffManagement = () => {
 
   const refreshStaffSpecialties = async (staffId: number) => {
     try {
-      const specialties = await apiService.staff.specialties.list(staffId.toString());
-      setStaff(currentStaff =>
-        currentStaff.map(member =>
-          member.id === staffId
-            ? { ...member, specialties }
-            : member
-        )
-      );
+      const specialtiesResponse = await fetch(`/api/staff/${staffId}/specialties`);
+      if (specialtiesResponse.ok) {
+        const specialties = await specialtiesResponse.json();
+        
+        setStaff(currentStaff => 
+          currentStaff.map(member => 
+            member.id === staffId 
+              ? { ...member, specialties }
+              : member
+          )
+        );
+      }
     } catch (error) {
       console.error(`Error refreshing specialties for staff ${staffId}:`, error);
     }
@@ -363,8 +390,8 @@ const StaffManagement = () => {
             <div className="flex gap-2">
               <Popover open={showFilters} onOpenChange={setShowFilters}>
                 <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
+                  <Button 
+                    variant="outline" 
                     className={`${(filterStatus !== "all" || filterBySpecialty !== "all" || sortBy !== "name") ? "bg-blue-50 border-blue-200" : ""}`}
                   >
                     <SlidersHorizontal className="h-4 w-4 mr-2" />
@@ -391,7 +418,7 @@ const StaffManagement = () => {
                         </SelectContent>
                       </Select>
                     </div>
-
+                    
                     <div className="space-y-2">
                       <Label className="text-sm font-medium">Especialidades</Label>
                       <Select value={filterBySpecialty} onValueChange={handleSpecialtyFilterChange}>
@@ -405,7 +432,7 @@ const StaffManagement = () => {
                         </SelectContent>
                       </Select>
                     </div>
-
+                    
                     <div className="space-y-2">
                       <Label className="text-sm font-medium">Ordenar por</Label>
                       <Select value={sortBy} onValueChange={handleSortChange}>
@@ -423,9 +450,9 @@ const StaffManagement = () => {
 
                     {(filterStatus !== "all" || filterBySpecialty !== "all" || sortBy !== "name" || searchTerm) && (
                       <div className="pt-2 border-t">
-                        <Button
-                          variant="ghost"
-                          size="sm"
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
                           onClick={clearAllFilters}
                           className="w-full"
                         >
@@ -477,8 +504,8 @@ const StaffManagement = () => {
             {sortBy !== "name" && (
               <Badge variant="secondary" className="text-xs">
                 Orden: {
-                  sortBy === "rating" ? "Mayor rating" :
-                  sortBy === "appointments" ? "Más citas" :
+                  sortBy === "rating" ? "Mayor rating" : 
+                  sortBy === "appointments" ? "Más citas" : 
                   "Más recientes"
                 }
                 <button
@@ -601,15 +628,15 @@ const StaffManagement = () => {
                       <div className="mb-3">
                         <div className="flex flex-wrap gap-1 mb-2">
                           {member.specialties.slice(0, 3).map((specialty) => (
-                            <Badge
-                              key={specialty.id}
-                              variant="outline"
+                            <Badge 
+                              key={specialty.id} 
+                              variant="outline" 
                               className="text-xs flex items-center gap-1"
-                              style={{
+                              style={{ 
                                 borderColor: specialty.color,
                                 color: specialty.color
                               }}
-                            >                              <div
+                            >                              <div 
                                 className="w-2 h-2 rounded-full"
                                 style={{ backgroundColor: specialty.color }}
                               />
@@ -629,7 +656,7 @@ const StaffManagement = () => {
                         </div>
                       </div>
                     )}
-
+                    
                     <div className="mt-3 pt-3 border-t text-sm text-gray-500 space-y-1">
                       <p>Email: {highlightMatch(member.email, searchTerm)}</p>
                       <p>Teléfono: {highlightMatch(member.phone, searchTerm)}</p>
@@ -641,14 +668,14 @@ const StaffManagement = () => {
                         <p>Horario: {highlightMatch(member.schedule, searchTerm)}</p>
                       )}
                     </div>
-
+                    
                     <div className="flex gap-2 mt-4">
                       <Button variant="outline" size="sm" className="hover:bg-blue-50 hover:border-blue-200">
                         <Edit className="h-3 w-3 mr-1" /> Editar
                       </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
                         className="text-purple-600 hover:text-purple-700 hover:bg-purple-50 hover:border-purple-200"
                         onClick={() => setSpecialtyDialogStaff({ id: member.id, name: member.name })}
                       >

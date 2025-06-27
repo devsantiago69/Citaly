@@ -1,7 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const staffSpecialtyController = require('../controllers/staffSpecialty.controller');
-const { validateRequired } = require('../middlewares/auth');
+const { validateRequired, verifyToken } = require('../middlewares/auth');
+
+router.use(verifyToken);
 
 /**
  * Rutas para especialidades del personal

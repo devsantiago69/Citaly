@@ -1,19 +1,19 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { Calendar as CalendarIcon, TrendingUp, Loader2, RefreshCw, DollarSign, AlertCircle, Filter } from "lucide-react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import StatsCards from "@/components/StatsCards";
-import { api } from "@/config/api";
-import { apiService } from "@/config/api-v2";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
+import StatsCards from "./StatsCards";
+import { apiService } from "../config/api-v2";
 import { Bar, BarChart, CartesianGrid, XAxis, Line, LineChart, RadialBar, RadialBarChart, PolarGrid, PolarRadiusAxis, Label, YAxis } from "recharts";
-import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from "./ui/chart";
+import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
+import { Button } from "./ui/button";
+import { Calendar } from "./ui/calendar";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { format, startOfMonth, endOfMonth, subDays, isWithinInterval } from "date-fns";
 import { es } from "date-fns/locale";
 import { DateRange } from "react-day-picker";
 import { toast } from "sonner";
+import { useSocket } from "../hooks/useSocket";
 
 // Interfaces mejoradas y completas
 interface Appointment {
@@ -83,46 +83,6 @@ interface DashboardStats {
   averageServiceTime: number;
 }
 
-interface FilterParams {
-  startDate?: string;
-  endDate?: string;
-  service?: string;
-  status?: string;
-}
-
-interface ChartDataItem {
-  name: string;
-  value: number;
-  color?: string;
-}
-
-interface ServiceData {
-  service: string;
-  total_revenue: number;
-  count: number;
-}
-
-interface AppointmentStatusData {
-  date: string;
-  completed: number;
-  cancelled: number;
-  scheduled: number;
-  total: number;
-}
-
-interface CompletionRatioData {
-  completed: number;
-  cancelled: number;
-  total: number;
-  ratio: number;
-}
-
-interface RevenueData {
-  channel: string;
-  total_revenue: number;
-  count: number;
-}
-
 const DashboardContent = () => {
   // Estados principales
   const [upcomingAppointments, setUpcomingAppointments] = useState<Appointment[]>([]);
@@ -148,7 +108,7 @@ const DashboardContent = () => {
     completionRate: 0,
     averageServiceTime: 0
   });
-    // Filtros globales con estado mejorado
+  // Filtros globales con estado mejorado
   const [filters, setFilters] = useState<DashboardFilters>({
     dateRange: {
       from: startOfMonth(new Date()),
@@ -191,7 +151,7 @@ const DashboardContent = () => {
 
     return params;
   }, [filters]);
-  // Función mejorada para filtrar datos localmente
+  // Funci�n mejorada para filtrar datos localmente
   const filterLocalData = useCallback((data: Appointment[], dateField: string = 'date') => {
     if (!Array.isArray(data)) return [];
 
@@ -202,70 +162,15 @@ const DashboardContent = () => {
 
       const withinDateRange = isWithinInterval(itemDate, { start: fromDate, end: toDate });
       const matchesChannel = filters.channel === 'all' || item.channel === filters.channel;
-      const matchesService = filters.service === 'all' ||
-        (item.service?.name === filters.service);
-      const matchesCategory = filters.category === 'all' ||
-        (item.service?.category === filters.category);
+      const matchesService = filters.service === 'all' || item.service?.name === filters.service;
+      const matchesCategory = filters.category === 'all' || item.service?.category === filters.category;
       const matchesStatus = filters.status === 'all' || item.status === filters.status;
 
       return withinDateRange && matchesChannel && matchesService && matchesCategory && matchesStatus;
     });
   }, [filters]);
 
-  // Funciones auxiliares para procesar datos
-  const processPopularServices = useCallback((appointments: Appointment[]) => {
-    if (!Array.isArray(appointments) || appointments.length === 0) return [];
-
-    const filteredAppointments = filterLocalData(appointments, 'date');
-    const serviceCounts: { [key: string]: { count: number; revenue: number } } = {};
-
-    filteredAppointments.forEach(app => {
-      if (app.service?.name) {
-        const serviceName = app.service.name;
-        if (!serviceCounts[serviceName]) {
-          serviceCounts[serviceName] = { count: 0, revenue: 0 };
-        }
-        serviceCounts[serviceName].count += 1;
-        serviceCounts[serviceName].revenue += app.service.price || 0;
-      }
-    });
-
-    return Object.entries(serviceCounts)
-      .map(([serviceName, data]) => {
-        const serviceDetails = allServices.find(s => s.name === serviceName);
-        return {
-          id: serviceDetails?.id || Math.random(),
-          name: serviceName,
-          category: serviceDetails?.category || 'General',
-          count: data.count,
-          revenue: data.revenue
-        };
-      })
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 5);
-  }, [filterLocalData, allServices]);
-
-  const calculateDashboardStats = useCallback((appointments: Appointment[], completionData: CompletionRatio): DashboardStats => {
-    const filteredAppointments = filterLocalData(appointments, 'date');
-
-    const totalRevenue = filteredAppointments.reduce((sum, app) =>
-      sum + (app.service?.price || 0), 0);
-
-    const totalAppointments = filteredAppointments.length;
-    const completionRate = completionData.completion_rate;
-
-    const avgServiceTime = filteredAppointments.reduce((sum, app) =>
-      sum + (app.service?.duration || 0), 0) / Math.max(totalAppointments, 1);
-
-    return {
-      totalRevenue,
-      totalAppointments,
-      completionRate,
-      averageServiceTime: Math.round(avgServiceTime)
-    };
-  }, [filterLocalData]);
-
-  // Función para obtener todos los servicios
+  // Funci�n para obtener todos los servicios
   const fetchServices = async () => {
     try {
       const services = await apiService.services.list();
@@ -277,25 +182,26 @@ const DashboardContent = () => {
     }
   };
 
-  // Función para obtener citas próximas (sin filtros)
+  // Funci�n para obtener citas pr�ximas (sin filtros)
   const fetchUpcomingAppointments = async () => {
     try {
       const today = format(new Date(), 'yyyy-MM-dd');
       let appointments = [];
 
       try {
-        // Intentar obtener citas específicas del día
+        // Intentar obtener citas espec�ficas del d�a
         appointments = await apiService.appointments.list({ date: today, status: 'scheduled,confirmed' });
       } catch {
         // Si falla, obtener todas las citas y filtrar
         const allAppointments = await apiService.appointments.list();
-        appointments = allAppointments.filter(app =>
+        appointments = allAppointments.filter((app: Appointment) =>
           app.date.startsWith(today) && ['scheduled', 'confirmed'].includes(app.status)
         );
       }
 
       const processedAppointments = (Array.isArray(appointments) ? appointments : [])
-        .sort((a, b) => a.time?.localeCompare(b.time) || 0)
+        .map((app: Appointment) => app)
+        .sort((a: Appointment, b: Appointment) => (a.time || '').localeCompare(b.time || ''))
         .slice(0, 6);
 
       console.log('Upcoming appointments:', processedAppointments);
@@ -322,10 +228,10 @@ const DashboardContent = () => {
         revenueByChannelResult,
         allAppointmentsResult
       ] = await Promise.allSettled([
-        apiService.reports.services(params),
-        apiService.reports.appointmentsStatus(params),
-        apiService.reports.servicesCompletion(params),
-        apiService.reports.revenue(params),
+        apiService.reports.services(),
+        apiService.reports.appointmentsStatus(),
+        apiService.reports.servicesCompletion(),
+        apiService.reports.revenue(),
         apiService.appointments.list()
       ]);
 
@@ -364,19 +270,52 @@ const DashboardContent = () => {
       setDashboardStats(stats);
 
       setLastUpdateTime(new Date());
-      console.log('✅ Dashboard actualizado exitosamente');
+      console.log('? Dashboard actualizado exitosamente');
 
     } catch (error) {
-      console.error('❌ Error al cargar datos del dashboard:', error);
-      setError('Error al cargar los datos del dashboard. Intenta actualizar la página.');
+      console.error('? Error al cargar datos del dashboard:', error);
+      setError('Error al cargar los datos del dashboard. Intenta actualizar la p�gina.');
       toast.error('Error al cargar los datos del dashboard');
     } finally {
       setLoading(false);
     }
-  }, [buildFilterParams, calculateDashboardStats, processPopularServices]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [buildFilterParams]);
 
-  // Funciones de formateo de datos
-  const formatTopServicesData = (data: ServiceData[]) => {
+  // Funciones auxiliares para procesar datos
+  const processPopularServices = useCallback((appointments: Appointment[]): PopularService[] => {
+    if (!Array.isArray(appointments) || appointments.length === 0) return [];
+
+    const filteredAppointments = filterLocalData(appointments, 'date');
+    const serviceCounts: { [key: string]: { count: number; revenue: number } } = {};
+
+    filteredAppointments.forEach(app => {
+      if (app.service?.name) {
+        const serviceName = app.service.name;
+        if (!serviceCounts[serviceName]) {
+          serviceCounts[serviceName] = { count: 0, revenue: 0 };
+        }
+        serviceCounts[serviceName].count += 1;
+        serviceCounts[serviceName].revenue += app.service.price || 0;
+      }
+    });
+
+    return Object.entries(serviceCounts)
+      .map(([serviceName, data]) => {
+        const serviceDetails = allServices.find(s => s.name === serviceName);
+        return {
+          id: serviceDetails?.id || Math.random(),
+          name: serviceName,
+          category: serviceDetails?.category || 'General',
+          count: data.count,
+          revenue: data.revenue
+        };
+      })
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
+  }, [filterLocalData, allServices]);
+
+  const formatTopServicesData = useCallback((data: TopServiceRevenue[]): TopServiceRevenue[] => {
     return (Array.isArray(data) ? data : [])
       .map(item => ({
         service: item.service || 'Sin nombre',
@@ -385,9 +324,9 @@ const DashboardContent = () => {
       }))
       .sort((a, b) => b.total_revenue - a.total_revenue)
       .slice(0, 5);
-  };
+  }, []);
 
-  const formatAppointmentsStatusData = (data: AppointmentStatusData[]) => {
+  const formatAppointmentsStatusData = useCallback((data: AppointmentStatus[]): AppointmentStatus[] => {
     return (Array.isArray(data) ? data : [])
       .map(item => ({
         date: format(new Date(item.date), 'dd/MM'),
@@ -397,20 +336,12 @@ const DashboardContent = () => {
         total: (Number(item.completed) || 0) + (Number(item.cancelled) || 0) + (Number(item.scheduled) || 0)
       }))
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-  };
+  }, []);
 
-  const formatCompletionRatioData = (data: CompletionRatioData | null): CompletionRatio => {
-    if (!data) {
-      return {
-        completed: 0,
-        cancelled: 0,
-        total: 0,
-        completion_rate: 0
-      };
-    }
-
-    const completed = Number(data.completed) || 0;
-    const cancelled = Number(data.cancelled) || 0;
+  const formatCompletionRatioData = useCallback((data: unknown): CompletionRatio => {
+    const dataObj = data as Record<string, unknown>;
+    const completed = Number(dataObj?.completed) || 0;
+    const cancelled = Number(dataObj?.cancelled) || 0;
     const total = completed + cancelled;
     const completion_rate = total > 0 ? Math.round((completed / total) * 100) : 0;
 
@@ -420,9 +351,9 @@ const DashboardContent = () => {
       total,
       completion_rate
     };
-  };
+  }, []);
 
-  const formatRevenueByChannelData = (data: RevenueData[]) => {
+  const formatRevenueByChannelData = useCallback((data: RevenueByChannel[]): RevenueByChannel[] => {
     return (Array.isArray(data) ? data : [])
       .map(item => ({
         channel: item.channel || 'Sin canal',
@@ -431,7 +362,27 @@ const DashboardContent = () => {
       }))
       .filter(item => item.total_revenue > 0)
       .sort((a, b) => b.total_revenue - a.total_revenue);
-  };
+  }, []);
+
+  const calculateDashboardStats = useCallback((appointments: Appointment[], completionData: CompletionRatio): DashboardStats => {
+    const filteredAppointments = filterLocalData(appointments, 'date');
+
+    const totalRevenue = filteredAppointments.reduce((sum, app) =>
+      sum + (app.service?.price || 0), 0);
+
+    const totalAppointments = filteredAppointments.length;
+    const completionRate = completionData.completion_rate;
+
+    const avgServiceTime = filteredAppointments.reduce((sum, app) =>
+      sum + (app.service?.duration || 0), 0) / Math.max(totalAppointments, 1);
+
+    return {
+      totalRevenue,
+      totalAppointments,
+      completionRate,
+      averageServiceTime: Math.round(avgServiceTime)
+    };
+  }, [filterLocalData]);
 
   // Effects actualizados
   useEffect(() => {
@@ -447,6 +398,21 @@ const DashboardContent = () => {
       fetchFilteredData();
     }
   }, [filters, allServices, fetchFilteredData]);
+
+  // Socket.IO - Escuchar actualizaciones en tiempo real
+  const { isConnected, subscribeToEvent } = useSocket();
+
+  useEffect(() => {
+    const unsubscribeStatsUpdate = subscribeToEvent?.('dashboard_stats_updated', (data: unknown) => {
+      console.log('?? Estad�sticas actualizadas en tiempo real:', data);
+      // Refrescar datos del dashboard
+      fetchFilteredData();
+    });
+
+    return () => {
+      unsubscribeStatsUpdate?.();
+    };
+  }, [subscribeToEvent, fetchFilteredData]);
 
   // Handlers para filtros completamente rediseñados
   const handleDateRangeChange = useCallback((newDateRange: DateRange | undefined) => {

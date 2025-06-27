@@ -1,10 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const citasController = require('../controllers/citas.controller');
-const { validateRequired, validateCompany } = require('../middlewares/auth');
+const { validateRequired, verifyToken } = require('../middlewares/auth');
 
 // Aplicar middleware de validación de company en todas las rutas
-router.use(validateCompany);
+router.use(verifyToken);
 
 // GET todas las citas
 router.get('/', citasController.getCitas);

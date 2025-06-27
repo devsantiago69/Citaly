@@ -20,7 +20,7 @@ import { ClientWizardForm } from "./ClientWizardForm";
 import UserForm from "./UserForm";
 import { DateRange } from "react-day-picker";
 import { format } from "date-fns";
-import { apiService } from "@/config/api-v2";
+import { API_BASE_URL } from "@/config/api";
 
 interface User {
   id: number;
@@ -61,39 +61,6 @@ interface UserType {
   active: boolean;
 }
 
-// Tipos para las funciones
-interface QueryParams {
-  searchTerm?: string;
-  status?: string;
-  hasAppointments?: string;
-  city?: string;
-  userType?: string;
-  startDate?: string;
-  endDate?: string;
-  sortBy?: string;
-  sortOrder?: string;
-}
-
-interface UserData {
-  first_name: string;
-  last_name: string;
-  email: string;
-  phone: string;
-  document_type: string;
-  document_number: string;
-  birth_date?: string;
-  gender?: string;
-  address?: string;
-  city?: string;
-  state?: string;
-  country?: string;
-  emergency_contact_name?: string;
-  emergency_contact_phone?: string;
-  blood_type?: string;
-  medical_conditions?: string;
-  user_type_id?: number;
-}
-
 const UserManagement = () => {
   const { toast } = useToast();
   const [users, setUsers] = useState<User[]>([]);
@@ -116,20 +83,24 @@ const UserManagement = () => {
   const fetchUsers = useCallback(async () => {
     setLoading(true);
     try {
-      const params: QueryParams = {};
-      if (searchTerm) params.searchTerm = searchTerm;
-      if (filters.status !== 'all') params.status = filters.status;
-      if (filters.hasAppointments !== 'all') params.hasAppointments = filters.hasAppointments;
-      if (filters.city) params.city = filters.city;
-      if (filters.userType !== 'all') params.userType = filters.userType;
-      if (filters.dateRange?.from) params.startDate = format(filters.dateRange.from, 'yyyy-MM-dd');
-      if (filters.dateRange?.to) params.endDate = format(filters.dateRange.to, 'yyyy-MM-dd');
+      const params = new URLSearchParams();
+      if (searchTerm) params.append('searchTerm', searchTerm);
+      if (filters.status !== 'all') params.append('status', filters.status);
+      if (filters.hasAppointments !== 'all') params.append('hasAppointments', filters.hasAppointments);
+      if (filters.city) params.append('city', filters.city);
+      if (filters.userType !== 'all') params.append('userType', filters.userType);
+      if (filters.dateRange?.from) params.append('startDate', format(filters.dateRange.from, 'yyyy-MM-dd'));
+      if (filters.dateRange?.to) params.append('endDate', format(filters.dateRange.to, 'yyyy-MM-dd'));
 
       const [sortField, sortOrder] = sortBy.split('-');
-      if (sortField) params.sortBy = sortField;
-      if (sortOrder) params.sortOrder = sortOrder;
+      if (sortField) params.append('sortBy', sortField);
+      if (sortOrder) params.append('sortOrder', sortOrder);
 
-      const data = await apiService.clients.list(params);
+      const response = await fetch(`${API_BASE_URL}/api/users?${params.toString()}`);
+      if (!response.ok) {
+        throw new Error('Network response was not ok');
+      }
+      const data = await response.json();
       setUsers(data);
     } catch (error) {
       console.error("Error fetching users:", error);
@@ -145,7 +116,11 @@ const UserManagement = () => {
 
   const fetchUserTypes = useCallback(async () => {
     try {
-      const data = await apiService.userTypes.list();
+      const response = await fetch(`${API_BASE_URL}/api/user-types`);
+      if (!response.ok) {
+        throw new Error('Network response was not ok');
+      }
+      const data = await response.json();
       setUserTypes(data.filter((userType: UserType) => userType.active));
     } catch (error) {
       console.error("Error fetching user types:", error);
@@ -163,7 +138,7 @@ const UserManagement = () => {
     return () => clearTimeout(debounceTimer);
   }, [fetchUsers]);
 
-  const handleFilterChange = (key: keyof typeof filters, value: string | DateRange | undefined) => {
+  const handleFilterChange = (key: keyof typeof filters, value: any) => {
     setFilters(prev => ({ ...prev, [key]: value }));
   };
   const clearFilters = () => {
@@ -177,14 +152,23 @@ const UserManagement = () => {
     });
     setSortBy("created_at-desc");
   };
-  const handleAddUser = async (userData: UserData) => {
+  const handleAddUser = async (userData: any) => {
     setLoading(true);
     try {
-      await apiService.clients.create(userData);
+      const response = await fetch(`${API_BASE_URL}/api/users`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(userData),
+      });
+
+      if (!response.ok) throw new Error('Error al crear el usuario');
+
       await fetchUsers();
       setIsDialogOpen(false);
       toast({
-        title: "…xito",
+        title: "√âxito",
         description: "Usuario creado correctamente",
       });
     } catch (error) {
@@ -199,14 +183,23 @@ const UserManagement = () => {
     }
   };
 
-  const handleCreateUser = async (userData: UserData) => {
+  const handleCreateUser = async (userData: any) => {
     setLoading(true);
     try {
-      await apiService.clients.create(userData);
+      const response = await fetch(`${API_BASE_URL}/api/users`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(userData),
+      });
+
+      if (!response.ok) throw new Error('Error al crear el usuario');
+
       await fetchUsers();
       setIsUserFormOpen(false);
       toast({
-        title: "…xito",
+        title: "√âxito",
         description: "Usuario creado correctamente",
       });
     } catch (error) {
@@ -221,17 +214,26 @@ const UserManagement = () => {
     }
   };
 
-  const handleUpdateUser = async (userData: UserData) => {
+  const handleUpdateUser = async (userData: any) => {
     if (!selectedUserForEdit) return;
     setLoading(true);
     try {
-      await apiService.clients.update(selectedUserForEdit.id.toString(), userData);
+      const response = await fetch(`${API_BASE_URL}/api/users/${selectedUserForEdit.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(userData),
+      });
+
+      if (!response.ok) throw new Error('Error al actualizar el usuario');
+
       await fetchUsers();
       setIsUserFormOpen(false);
       setIsEditingUser(false);
       setSelectedUserForEdit(null);
       toast({
-        title: "…xito",
+        title: "√âxito",
         description: "Usuario actualizado correctamente",
       });
     } catch (error) {
@@ -247,10 +249,15 @@ const UserManagement = () => {
   };
   const handleDeleteUser = async (id: number) => {
     try {
-      await apiService.clients.delete(id.toString());
+      const response = await fetch(`${API_BASE_URL}/api/users/${id}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) throw new Error('Error al eliminar el usuario');
+
       await fetchUsers();
       toast({
-        title: "…xito",
+        title: "√âxito",
         description: "Usuario eliminado correctamente",
       });
     } catch (error) {
@@ -287,17 +294,26 @@ const UserManagement = () => {
     setIsUserFormOpen(true);
   };
 
-  const handleEditClient = async (userData: UserData) => {
+  const handleEditClient = async (userData: any) => {
     if (!selectedUser) return;
     setLoading(true);
     try {
-      await apiService.clients.update(selectedUser.id.toString(), userData);
+      const response = await fetch(`${API_BASE_URL}/api/clients/${selectedUser.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(userData),
+      });
+
+      if (!response.ok) throw new Error('Error al actualizar el cliente');
+
       await fetchUsers();
       setIsDialogOpen(false);
       setIsEditMode(false);
       setSelectedUser(null);
       toast({
-        title: "…xito",
+        title: "√âxito",
         description: "Cliente actualizado correctamente",
       });
     } catch (error) {
@@ -332,7 +348,7 @@ const UserManagement = () => {
     }).format(price);
   };
 
-  const activeFilterCount =
+  const activeFilterCount = 
     (searchTerm ? 1 : 0) +
     (filters.status !== 'all' ? 1 : 0) +
     (filters.hasAppointments !== 'all' ? 1 : 0) +
@@ -343,12 +359,11 @@ const UserManagement = () => {
   return (
     <div className="space-y-6">
       <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between mb-4">
-            <CardTitle>GestiÛn de Usuarios</CardTitle>
+        <CardHeader>          <div className="flex items-center justify-between mb-4">
+            <CardTitle>Gesti√≥n de Usuarios</CardTitle>
             <div className="flex gap-2">
-              <Button
-                className="bg-green-600 hover:bg-green-700"
+              <Button 
+                className="bg-green-600 hover:bg-green-700" 
                 onClick={() => {
                   setIsEditingUser(false);
                   setSelectedUserForEdit(null);
@@ -358,8 +373,8 @@ const UserManagement = () => {
                 <Users className="h-4 w-4 mr-2" />
                 Crear Usuario
               </Button>
-              <Button
-                className="bg-blue-600 hover:bg-blue-700"
+              <Button 
+                className="bg-blue-600 hover:bg-blue-700" 
                 onClick={() => {
                   setIsEditMode(false);
                   setSelectedUser(null);
@@ -375,7 +390,7 @@ const UserManagement = () => {
           <div className="flex flex-col md:flex-row gap-2">
             <div className="relative flex-grow">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input
+              <Input 
                 placeholder="Buscar por nombre, email, tel√©fono..."
                 className="pl-10"
                 value={searchTerm}
@@ -509,8 +524,8 @@ const UserManagement = () => {
                         </div>
                       </div>                      <div className="flex items-center gap-1">
                         {user.user_type_id ? (
-                          <Button
-                            variant="ghost"
+                          <Button 
+                            variant="ghost" 
                             size="sm"
                             onClick={() => handleEditUserClick(user)}
                             title="Editar Usuario"
@@ -518,8 +533,8 @@ const UserManagement = () => {
                             <Edit className="h-4 w-4" />
                           </Button>
                         ) : (
-                          <Button
-                            variant="ghost"
+                          <Button 
+                            variant="ghost" 
                             size="sm"
                             onClick={() => handleEditClick(user)}
                             title="Editar Cliente"
@@ -527,9 +542,9 @@ const UserManagement = () => {
                             <Edit className="h-4 w-4" />
                           </Button>
                         )}
-                        <Button
-                          variant="ghost"
-                          size="sm"
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
                           className="text-red-600"
                           onClick={() => handleDeleteUser(user.id)}
                         >
@@ -575,7 +590,7 @@ const UserManagement = () => {
             <DialogDescription>
               Complete la informaci√≥n del cliente paso a paso.
             </DialogDescription>
-          </DialogHeader>          <ClientWizardForm
+          </DialogHeader>          <ClientWizardForm 
             onSubmit={isEditMode ? handleEditClient : handleAddUser}
             loading={loading}
             client={selectedUser}
@@ -592,7 +607,7 @@ const UserManagement = () => {
               Complete la informaci√≥n del usuario y seleccione su tipo.
             </DialogDescription>
           </DialogHeader>
-          <UserForm
+          <UserForm 
             onSubmit={isEditingUser ? handleUpdateUser : handleCreateUser}
             loading={loading}
             user={selectedUserForEdit}

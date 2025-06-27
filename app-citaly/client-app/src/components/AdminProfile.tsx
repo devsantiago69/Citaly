@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { useAuth } from '@/contexts/AuthContext';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import { useAuth } from '../hooks/useAuth';
 import { User, Building, Mail, Phone, MapPin, Edit2, Save, X } from 'lucide-react';
 
 const AdminProfile = () => {
@@ -51,7 +51,7 @@ const AdminProfile = () => {
           <h2 className="text-2xl font-bold text-gray-900">Mi Perfil</h2>
           <p className="text-gray-600">Gestiona tu información personal y de empresa</p>
         </div>
-        
+
         {!isEditing ? (
           <Button onClick={() => setIsEditing(true)} className="flex items-center gap-2">
             <Edit2 className="h-4 w-4" />
@@ -98,7 +98,7 @@ const AdminProfile = () => {
                 <p className="text-gray-900">{user?.name}</p>
               )}
             </div>
-            
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Correo electrónico
@@ -114,7 +114,7 @@ const AdminProfile = () => {
                 <p className="text-gray-900">{user?.email}</p>
               )}
             </div>
-            
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Rol
@@ -144,7 +144,7 @@ const AdminProfile = () => {
                 <Input
                   value={formData.company.name}
                   onChange={(e) => setFormData({
-                    ...formData, 
+                    ...formData,
                     company: {...formData.company, name: e.target.value}
                   })}
                   placeholder="Nombre de la empresa"
@@ -153,7 +153,7 @@ const AdminProfile = () => {
                 <p className="text-gray-900">{user?.company?.name}</p>
               )}
             </div>
-            
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 NIT
@@ -162,7 +162,7 @@ const AdminProfile = () => {
                 <Input
                   value={formData.company.nit}
                   onChange={(e) => setFormData({
-                    ...formData, 
+                    ...formData,
                     company: {...formData.company, nit: e.target.value}
                   })}
                   placeholder="123.456.789-0"
@@ -171,7 +171,7 @@ const AdminProfile = () => {
                 <p className="text-gray-900">{user?.company?.nit}</p>
               )}
             </div>
-            
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 <MapPin className="h-4 w-4 inline mr-1" />
@@ -181,7 +181,7 @@ const AdminProfile = () => {
                 <Input
                   value={formData.company.address}
                   onChange={(e) => setFormData({
-                    ...formData, 
+                    ...formData,
                     company: {...formData.company, address: e.target.value}
                   })}
                   placeholder="Dirección completa"
@@ -190,7 +190,7 @@ const AdminProfile = () => {
                 <p className="text-gray-900">{user?.company?.address}</p>
               )}
             </div>
-            
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 <Phone className="h-4 w-4 inline mr-1" />
@@ -200,7 +200,7 @@ const AdminProfile = () => {
                 <Input
                   value={formData.company.phone}
                   onChange={(e) => setFormData({
-                    ...formData, 
+                    ...formData,
                     company: {...formData.company, phone: e.target.value}
                   })}
                   placeholder="+57 300 123 4567"
@@ -209,7 +209,7 @@ const AdminProfile = () => {
                 <p className="text-gray-900">{user?.company?.phone}</p>
               )}
             </div>
-            
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 <Mail className="h-4 w-4 inline mr-1" />
@@ -220,7 +220,7 @@ const AdminProfile = () => {
                   type="email"
                   value={formData.company.email}
                   onChange={(e) => setFormData({
-                    ...formData, 
+                    ...formData,
                     company: {...formData.company, email: e.target.value}
                   })}
                   placeholder="info@empresa.com"

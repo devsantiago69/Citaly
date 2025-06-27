@@ -1,10 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const usuariosController = require('../controllers/usuarios.controller');
-const { validateRequired, validateEmail, validateCompany } = require('../middlewares/auth');
+const { validateRequired, validateEmail, verifyToken } = require('../middlewares/auth');
 
 // Aplicar middleware de validación de company en todas las rutas
-router.use(validateCompany);
+router.use(verifyToken);
 
 // ===== CLIENTES =====
 // GET todos los clientes

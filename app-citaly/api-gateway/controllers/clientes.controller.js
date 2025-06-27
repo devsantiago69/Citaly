@@ -4,11 +4,11 @@ const db = require('../config/db');
 // Obtener todos los clientes de una empresa (paginado, búsqueda, filtros y datos enriquecidos)
 const getClientes = async (req, res) => {
   try {
-    const { empresa_id } = req.params;
+    const { company_id } = req.user; // Utilizar company_id del token
     const { page = 1, limit = 10, search = '', estado = '', genero = '', ciudad = '' } = req.query;
     const offset = (page - 1) * limit;
     let whereClause = 'WHERE c.empresa_id = ?';
-    let params = [empresa_id];
+    let params = [company_id];
     if (search) {
       whereClause += ' AND (c.nombres LIKE ? OR c.apellidos LIKE ? OR c.correo_electronico LIKE ? OR c.numero_documento LIKE ?)';
       const searchParam = `%${search}%`;
@@ -56,12 +56,13 @@ const getClientes = async (req, res) => {
 const getCliente = async (req, res) => {
   try {
     const { id } = req.params;
+    const { company_id } = req.user; // Utilizar company_id del token
     const [cliente] = await db.execute(`
       SELECT c.*, e.nombre as empresa_nombre
       FROM clientes c
       LEFT JOIN empresas e ON c.empresa_id = e.id
-      WHERE c.id = ?
-    `, [id]);
+      WHERE c.id = ? AND c.empresa_id = ?
+    `, [id, company_id]);
     if (cliente.length === 0) {
       return res.status(404).json({ success: false, message: 'Cliente no encontrado' });
     }
@@ -74,10 +75,10 @@ const getCliente = async (req, res) => {
       LEFT JOIN personal p ON ci.personal_id = p.id
       LEFT JOIN usuarios u ON p.usuario_id = u.id
       LEFT JOIN sucursales suc ON ci.sucursal_id = suc.id
-      WHERE ci.cliente_id = ?
+      WHERE ci.cliente_id = ? AND ci.empresa_id = ?
       ORDER BY ci.fecha DESC, ci.hora DESC
       LIMIT 10
-    `, [id]);
+    `, [id, company_id]);
     res.json({
       success: true,
       data: { ...cliente[0], historial_citas: citas }
@@ -91,44 +92,31 @@ const getCliente = async (req, res) => {
 const createCliente = async (req, res) => {
   try {
     const {
-      empresa_id, nombres, apellidos, tipo_documento, numero_documento,
+      nombres, apellidos, tipo_documento, numero_documento,
       fecha_nacimiento, genero, correo_electronico, telefono, direccion,
       ciudad, pais = 'Chile'
     } = req.body;
-    const creado_por = req.user?.id || 1;
-    if (!empresa_id || !nombres || !apellidos || !numero_documento || !correo_electronico || !telefono) {
-      return res.status(400).json({ success: false, message: 'Los campos empresa_id, nombres, apellidos, numero_documento, correo_electronico y telefono son requeridos' });
+    const { company_id, id: creado_por } = req.user; // Utilizar company_id e id del token
+
+    if (!nombres || !apellidos || !numero_documento || !correo_electronico || !telefono) {
+      return res.status(400).json({ success: false, message: 'Los campos nombres, apellidos, numero_documento, correo_electronico y telefono son requeridos' });
     }
-    const [empresa] = await db.execute('SELECT id FROM empresas WHERE id = ?', [empresa_id]);
-    if (empresa.length === 0) {
-      return res.status(404).json({ success: false, message: 'Empresa no encontrada' });
-    }
-    const [existingCliente] = await db.execute(
-      'SELECT id FROM clientes WHERE empresa_id = ? AND tipo_documento = ? AND numero_documento = ?',
-      [empresa_id, tipo_documento, numero_documento]
+    const [existing] = await db.execute(
+      'SELECT id FROM clientes WHERE (correo_electronico = ? OR numero_documento = ?) AND empresa_id = ?',
+      [correo_electronico, numero_documento, company_id]
     );
-    if (existingCliente.length > 0) {
-      return res.status(400).json({ success: false, message: 'Ya existe un cliente con este documento en la empresa' });
+    if (existing.length > 0) {
+      return res.status(400).json({ success: false, message: 'Ya existe un cliente con este correo o número de documento en la empresa' });
     }
     const [result] = await db.execute(`
-      INSERT INTO clientes
-      (empresa_id, nombres, apellidos, tipo_documento, numero_documento, fecha_nacimiento,
-       genero, correo_electronico, telefono, direccion, ciudad, pais, creado_por, actualizado_por)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `, [
-      empresa_id, nombres, apellidos, tipo_documento, numero_documento, fecha_nacimiento,
-      genero, correo_electronico, telefono, direccion, ciudad, pais, creado_por, creado_por
-    ]);
+      INSERT INTO clientes (empresa_id, nombres, apellidos, tipo_documento, numero_documento, fecha_nacimiento, genero, correo_electronico, telefono, direccion, ciudad, pais, creado_por)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [company_id, nombres, apellidos, tipo_documento, numero_documento, fecha_nacimiento, genero, correo_electronico, telefono, direccion, ciudad, pais, creado_por]);
+    const [nuevoCliente] = await db.execute('SELECT * FROM clientes WHERE id = ?', [result.insertId]);
     res.status(201).json({
       success: true,
       message: 'Cliente creado exitosamente',
-      data: {
-        id: result.insertId,
-        nombres,
-        apellidos,
-        correo_electronico,
-        telefono
-      }
+      data: nuevoCliente
     });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Error interno del servidor', error: error.message });
@@ -139,6 +127,7 @@ const createCliente = async (req, res) => {
 const updateCliente = async (req, res) => {
   try {
     const { id } = req.params;
+    const { company_id } = req.user; // Utilizar company_id del token
     const {
       nombres, apellidos, tipo_documento, numero_documento, fecha_nacimiento,
       genero, correo_electronico, telefono, direccion, ciudad, pais, estado
@@ -157,37 +146,59 @@ const updateCliente = async (req, res) => {
         return res.status(400).json({ success: false, message: 'Ya existe otro cliente con este documento en la empresa' });
       }
     }
-    await db.execute(`
+    const result = await db.execute(`
       UPDATE clientes
       SET nombres = ?, apellidos = ?, tipo_documento = ?, numero_documento = ?,
           fecha_nacimiento = ?, genero = ?, correo_electronico = ?, telefono = ?,
-          direccion = ?, ciudad = ?, pais = ?, estado = ?, actualizado_por = ?
-      WHERE id = ?
+          direccion = ?, ciudad = ?, pais = ?, estado = ?
+      WHERE id = ? AND empresa_id = ?
     `, [
       nombres, apellidos, tipo_documento, numero_documento, fecha_nacimiento,
       genero, correo_electronico, telefono, direccion, ciudad, pais, estado,
-      actualizado_por, id
+      id, company_id
     ]);
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ success: false, message: 'Cliente no encontrado o ya actualizado' });
+    }
     res.json({ success: true, message: 'Cliente actualizado exitosamente' });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Error interno del servidor', error: error.message });
   }
 };
 
-// Eliminar cliente (cambiar estado a inactivo)
+// Eliminar cliente (soft delete)
 const deleteCliente = async (req, res) => {
   try {
     const { id } = req.params;
-    const actualizado_por = req.user?.id || 1;
-    const [existingCliente] = await db.execute('SELECT id FROM clientes WHERE id = ?', [id]);
-    if (existingCliente.length === 0) {
+    const { company_id } = req.user; // Utilizar company_id del token
+    const [result] = await db.execute(
+      'UPDATE clientes SET estado = \'eliminado\' WHERE id = ? AND empresa_id = ?',
+      [id, company_id]
+    );
+    if (result.affectedRows === 0) {
       return res.status(404).json({ success: false, message: 'Cliente no encontrado' });
     }
-    await db.execute(
-      'UPDATE clientes SET estado = "Inactivo", actualizado_por = ? WHERE id = ?',
-      [actualizado_por, id]
-    );
-    res.json({ success: true, message: 'Cliente desactivado exitosamente' });
+    res.json({ success: true, message: 'Cliente eliminado exitosamente' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Error interno del servidor', error: error.message });
+  }
+};
+
+// Buscar clientes (autocompletado)
+const searchClientes = async (req, res) => {
+  try {
+    const { company_id } = req.user; // Utilizar company_id del token
+    const { term } = req.query;
+    if (!term) {
+      return res.status(400).json({ success: false, message: 'Parámetro de búsqueda requerido' });
+    }
+    const [clientes] = await db.execute(`
+      SELECT id, nombres, apellidos, correo_electronico, numero_documento
+      FROM clientes
+      WHERE empresa_id = ? AND (nombres LIKE ? OR apellidos LIKE ? OR numero_documento LIKE ?)
+      LIMIT 10
+    `, [company_id, `%${term}%`, `%${term}%`, `%${term}%`]);
+    res.json({ success: true, data: clientes });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Error interno del servidor', error: error.message });
   }
@@ -196,43 +207,20 @@ const deleteCliente = async (req, res) => {
 // Obtener estadísticas de clientes
 const getEstadisticasClientes = async (req, res) => {
   try {
-    const { empresa_id } = req.params;
-    const [stats] = await db.execute(`
-      SELECT
-        COUNT(*) as total_clientes,
-        COUNT(CASE WHEN estado = 'Activo' THEN 1 END) as clientes_activos,
-        COUNT(CASE WHEN estado = 'Inactivo' THEN 1 END) as clientes_inactivos,
-        COUNT(CASE WHEN DATE(fecha_creacion) = CURDATE() THEN 1 END) as nuevos_hoy,
-        COUNT(CASE WHEN MONTH(fecha_creacion) = MONTH(CURRENT_DATE) THEN 1 END) as nuevos_mes,
-        COUNT(CASE WHEN genero = 'Masculino' THEN 1 END) as masculinos,
-        COUNT(CASE WHEN genero = 'Femenino' THEN 1 END) as femeninos
-      FROM clientes
-      WHERE empresa_id = ?
-    `, [empresa_id]);
-    res.json({ success: true, data: stats[0] });
-  } catch (error) {
-    res.status(500).json({ success: false, message: 'Error interno del servidor', error: error.message });
-  }
-};
-
-// Buscar clientes por término
-const searchClientes = async (req, res) => {
-  try {
-    const { empresa_id } = req.params;
-    const { q } = req.query;
-    if (!q) {
-      return res.status(400).json({ success: false, message: 'Parámetro de búsqueda requerido' });
-    }
-    const [clientes] = await db.execute(`
-      SELECT id, nombres, apellidos, correo_electronico, telefono, numero_documento
-      FROM clientes
-      WHERE empresa_id = ?
-      AND (nombres LIKE ? OR apellidos LIKE ? OR correo_electronico LIKE ? OR numero_documento LIKE ?)
-      AND estado = 'Activo'
-      ORDER BY nombres, apellidos
-      LIMIT 20
-    `, [empresa_id, `%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`]);
-    res.json({ success: true, data: clientes });
+    const { company_id } = req.user; // Utilizar company_id del token
+    const [[{ total_clientes }]] = await db.execute('SELECT COUNT(*) as total_clientes FROM clientes WHERE empresa_id = ?', [company_id]);
+    const [[{ nuevos_clientes_mes }]] = await db.execute('SELECT COUNT(*) as nuevos_clientes_mes FROM clientes WHERE empresa_id = ? AND fecha_creacion >= DATE_SUB(NOW(), INTERVAL 1 MONTH)', [company_id]);
+    const [[{ clientes_activos }]] = await db.execute('SELECT COUNT(*) as clientes_activos FROM clientes WHERE empresa_id = ? AND estado = \'activo\'', [company_id]);
+    const [distribucion_genero] = await db.execute('SELECT genero, COUNT(*) as count FROM clientes WHERE empresa_id = ? GROUP BY genero', [company_id]);
+    res.json({
+      success: true,
+      data: {
+        total_clientes,
+        nuevos_clientes_mes,
+        clientes_activos,
+        distribucion_genero
+      }
+    });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Error interno del servidor', error: error.message });
   }

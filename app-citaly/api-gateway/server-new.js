@@ -3,11 +3,12 @@ const cors = require('cors');
 const http = require('http');
 const config = require('./config/env');
 const logger = require('./logger');
-const { requestLogger, errorHandler } = require('./middlewares/auth');
+const { requestLogger, errorHandler, verifyToken } = require('./middlewares/auth');
 const socketManager = require('./config/socket');
 const webhookManager = require('./config/webhooks');
 
 // Importar rutas principales
+const authRoutes = require('./routes/auth.routes');
 const citasRoutes = require('./routes/citas.routes');
 const citasNewRoutes = require('./routes/citas-new.routes');
 const usuariosRoutes = require('./routes/usuarios.routes');
@@ -23,22 +24,51 @@ const serviciosNewRoutes = require('./routes/servicios-new.routes');
 const app = express();
 const server = http.createServer(app);
 
-// Configuración de CORS
+// Configuración de CORS avanzada para resolver problemas
 const corsOptions = {
-  origin: config.CORS_ORIGINS,
+  origin: function(origin, callback) {
+    // Permitir cualquier origen en desarrollo
+    callback(null, true);
+  },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
-  credentials: true,
-  optionsSuccessStatus: 204
+  allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'X-Requested-With'],
+  credentials: false, // Cambiado a false para evitar problemas con credenciales en diferentes dominios
+  optionsSuccessStatus: 200 // Algunos navegadores legacy requieren 200 en lugar de 204
 };
 
 // Middlewares globales
 app.use(cors(corsOptions));
+
+// Log de todas las solicitudes para debugging
+app.use((req, res, next) => {
+  const origin = req.headers.origin || req.headers.referer || 'Desconocido';
+  logger.info(`[CORS] Solicitud ${req.method} ${req.path} desde ${origin}`);
+
+  // Agregar encabezados CORS a todas las respuestas manualmente
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  next();
+});
+// Registrar todos los orígenes de las solicitudes para depuración
+app.use((req, res, next) => {
+  const origin = req.headers.origin || req.headers.referer || 'Desconocido';
+  logger.info(`Solicitud recibida desde origen: ${origin}, ruta: ${req.path}, método: ${req.method}`);
+  next();
+});
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
 // Middleware de logging
 app.use(requestLogger);
+
+// Rutas públicas (sin autenticación)
+app.use('/api/auth', authRoutes);
+
+// Middleware de autenticación (para todas las rutas siguientes)
+app.use(verifyToken);
+
+// Rutas protegidas
+app.use('/api/citas', citasRoutes);
 
 // Test del sistema de logs
 logger.info('Initializing server', {

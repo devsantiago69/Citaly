@@ -1,8 +1,8 @@
 import { Calendar, Home, Clock, Settings, Users, UserCheck, BarChart3, Cog, Bell, Menu, X, User, CreditCard, LogOut, Building, Palette, Shield, Award } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn } from "../lib/utils";
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { useAuth } from "@/contexts/AuthContext";
+import { Button } from "../components/ui/button";
+import { useAuth } from "../hooks/useAuth";
 import { Link, useLocation } from "react-router-dom";
 
 const Sidebar = () => {
@@ -15,16 +15,16 @@ const Sidebar = () => {
     { id: "calendar", label: "Calendario", icon: Calendar, path: "/calendar" },
     { id: "appointments", label: "Citas", icon: Clock, path: "/appointments" },
     { id: "services", label: "Servicios", icon: Settings, path: "/services" },
-    { id: "categories", label: "Categor铆as", icon: Palette, path: "/categories" },
+    { id: "categories", label: "Categor韆s", icon: Palette, path: "/categories" },
     { id: "specialties", label: "Especialidades", icon: Award, path: "/specialties" },
     { id: "users", label: "Clientes", icon: Users, path: "/users" },
     { id: "staff", label: "Staff", icon: UserCheck, path: "/staff" },
     { id: "reports", label: "Reportes", icon: BarChart3, path: "/reports" },
     { id: "company-info", label: "Mi Empresa", icon: Building, path: "/company" },
     { id: "admin-profile", label: "Mi Perfil", icon: User, path: "/profile" },
-    { id: "admin-management", label: "Administraci贸n", icon: Shield, path: "/admin" },
-    { id: "billing", label: "Facturaci贸n", icon: CreditCard, path: "/billing" },
-    { id: "settings", label: "Configuraci贸n", icon: Cog, path: "/settings" },
+    { id: "admin-management", label: "Administraci髇", icon: Shield, path: "/admin" },
+    { id: "billing", label: "Facturaci髇", icon: CreditCard, path: "/billing" },
+    { id: "settings", label: "Configuraci髇", icon: Cog, path: "/settings" },
     { id: "reminders", label: "Recordatorios", icon: Bell, path: "/reminders" },
   ];
 
@@ -92,6 +92,22 @@ const Sidebar = () => {
             </Button>
           </div>
 
+          {/* Company Info */}
+          {user && user.company && (
+            <div className="py-3 px-4 border-b">
+              {!isCollapsed ? (
+                <>
+                  <p className="text-sm text-gray-500">Empresa</p>
+                  <h2 className="font-semibold text-gray-900 truncate">{user.company.name}</h2>
+                </>
+              ) : (
+                <div className="flex justify-center">
+                  <Building className="h-5 w-5 text-gray-500" />
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Navigation */}
           <nav className="flex-1 p-2 space-y-1">
             {menuItems.map((item) => (
@@ -107,7 +123,7 @@ const Sidebar = () => {
               onClick={logout}
             >
               <LogOut className={cn("h-5 w-5", !isCollapsed && "mr-3")} />
-              {!isCollapsed && <span>Cerrar Sesi贸n</span>}
+              {!isCollapsed && <span>Cerrar Sesi髇</span>}
             </Button>
           </div>
         </div>

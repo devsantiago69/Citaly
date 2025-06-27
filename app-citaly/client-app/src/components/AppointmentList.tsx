@@ -17,8 +17,6 @@ import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { toast } from "sonner";
-import { useSocket } from "../../hooks/useSocket";
-import { apiService } from "@/config/api-v2";
 import { DateRange } from "react-day-picker";
 
 // Interfaces unificadas desde AppointmentCalendar
@@ -67,7 +65,6 @@ const AppointmentList = ({ appointments: propAppointments, isLoading: propIsLoad
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [serviceFilter, setServiceFilter] = useState<string>("all");
-  const { subscribeToEvent } = useSocket();
 
   // Fetch appointments if not provided as props
   useEffect(() => {
@@ -79,12 +76,13 @@ const AppointmentList = ({ appointments: propAppointments, isLoading: propIsLoad
   const fetchAppointments = async () => {
     setIsLoading(true);
     try {
-      const { apiService } = await import('@/config/api-v2');
-      const data = await apiService.appointments.list();
-      setAppointments(data);
+      const response = await fetch('/api/appointments');
+      if (response.ok) {
+        const data = await response.json();
+        setAppointments(data);
+      }
     } catch (error) {
       console.error('Error fetching appointments:', error);
-      toast.error('Error al cargar las citas');
     } finally {
       setIsLoading(false);
     }
@@ -154,7 +152,7 @@ const AppointmentList = ({ appointments: propAppointments, isLoading: propIsLoad
         bgColor: "bg-gray-50 border-gray-200"
       }
     };
-
+    
     return configs[status as keyof typeof configs] || {
       badge: <Badge variant="secondary" className="capitalize">{status}</Badge>,
       bgColor: "bg-gray-50 border-gray-200"
@@ -175,57 +173,38 @@ const AppointmentList = ({ appointments: propAppointments, isLoading: propIsLoad
     }
 
     try {
-      const { apiService } = await import('@/config/api-v2');
-      const updatedAppointment = await apiService.appointments.update(appointmentId.toString(), { status: newStatus });
+      const response = await fetch(`/api/appointments/${appointmentId}/status`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ status: newStatus }),
+      });
 
-      setAppointments(prevAppointments =>
-        prevAppointments.map(apt =>
-          apt.id === appointmentId ? { ...apt, status: updatedAppointment.status || newStatus } : apt
-        )
-      );
-      toast.success(`Cita actualizada a "${newStatus}".`);
+      if (response.ok) {
+        const updatedAppointment = await response.json();
+        setAppointments(prevAppointments =>
+          prevAppointments.map(apt =>
+            apt.id === appointmentId ? { ...apt, status: updatedAppointment.status } : apt
+          )
+        );
+        toast.success(`Cita actualizada a "${newStatus}".`);
+      } else {
+        const errorData = await response.json().catch(() => ({ message: 'No se pudo procesar la respuesta del servidor.' }));
+        toast.error(`Error al actualizar la cita: ${errorData.message || 'Error desconocido'}`);
+      }
     } catch (error) {
       console.error('Error updating appointment status:', error);
       toast.error('No se pudo conectar con el servidor para actualizar la cita.');
     }
   };
-
+  
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('es-CL', {
       style: 'currency',
       currency: 'CLP'
     }).format(amount);
   };
-
-  // Socket.IO - Escuchar actualizaciones en tiempo real
-  useEffect(() => {
-    const unsubscribeAppointmentCreated = subscribeToEvent?.('appointment_created', (data: unknown) => {
-      console.log('?? Nueva cita creada en tiempo real:', data);
-      toast.success('Nueva cita creada');
-      // Refrescar la lista de citas
-      fetchAppointments();
-    });
-
-    const unsubscribeAppointmentUpdated = subscribeToEvent?.('appointment_updated', (data: unknown) => {
-      console.log('?? Cita actualizada en tiempo real:', data);
-      toast.info('Cita actualizada');
-      // Refrescar la lista de citas
-      fetchAppointments();
-    });
-
-    const unsubscribeAppointmentDeleted = subscribeToEvent?.('appointment_deleted', (data: unknown) => {
-      console.log('??? Cita eliminada en tiempo real:', data);
-      toast.error('Cita eliminada');
-      // Refrescar la lista de citas
-      fetchAppointments();
-    });
-
-    return () => {
-      unsubscribeAppointmentCreated?.();
-      unsubscribeAppointmentUpdated?.();
-      unsubscribeAppointmentDeleted?.();
-    };
-  }, [subscribeToEvent]);
 
   if (isLoading) {
     return (
@@ -295,7 +274,7 @@ const AppointmentList = ({ appointments: propAppointments, isLoading: propIsLoad
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
-
+            
             {/* Status Filter */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>

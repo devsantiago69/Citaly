@@ -1,6 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const sucursalesController = require('../controllers/sucursales.controller');
+const { verifyToken } = require('../middlewares/auth');
+
+router.use(verifyToken);
 
 // Rutas para sucursales (nueva estructura)
 

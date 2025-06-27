@@ -1,4 +1,5 @@
 const logger = require('../logger');
+const jwt = require('jsonwebtoken');
 
 // Middleware para logging de requests
 const requestLogger = (req, res, next) => {
@@ -32,11 +33,35 @@ const errorHandler = (err, req, res, next) => {
   });
 };
 
-// Middleware para validar company_id (opcional)
-const validateCompany = (req, res, next) => {
-  // Por ahora hardcodeado a 1, pero se puede expandir
-  req.companyId = 1;
-  next();
+// Middleware para validar token JWT y extraer datos de usuario y empresa
+const verifyToken = (req, res, next) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
+
+  if (token == null) {
+    return res.sendStatus(401); // No hay token, no autorizado
+  }
+
+  jwt.verify(token, process.env.JWT_SECRET || 'your_jwt_secret', (err, user) => {
+    if (err) {
+      logger.error('Error en verificación de token JWT:', err);
+      return res.sendStatus(403); // Token inválido o expirado
+    }
+
+    // Validar que empresa_id esté presente
+    if (!user || !user.empresa_id) {
+      logger.error('Token JWT sin empresa_id:', user);
+      return res.status(403).json({ error: 'Token inválido: faltan datos de empresa' });
+    }
+
+    // Asegurarnos de que company_id esté presente para compatibilidad con otras partes del código
+    req.user = {
+      ...user,
+      company_id: user.empresa_id // Asegurar que ambos estén disponibles
+    };
+    req.companyId = user.empresa_id; // Adjuntar companyId para usarlo en otros controladores
+    next();
+  });
 };
 
 // Middleware para validar parámetros requeridos
@@ -79,7 +104,7 @@ const validateEmail = (req, res, next) => {
 module.exports = {
   requestLogger,
   errorHandler,
-  validateCompany,
+  verifyToken,
   validateRequired,
   validateEmail
 };

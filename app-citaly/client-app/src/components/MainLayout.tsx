@@ -1,6 +1,6 @@
 import { useState } from "react";
-import Sidebar from "@/components/Sidebar";
-import MainHeader from "@/components/MainHeader";
+import Sidebar from "./Sidebar";
+import MainHeader from "./MainHeader";
 import { Outlet } from "react-router-dom";
 
 interface MainLayoutProps {

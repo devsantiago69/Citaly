@@ -233,10 +233,18 @@ class BusquedaController {
       // En una implementación real, aquí se invalidaría el token JWT
       // o se limpiaría la sesión del usuario
 
-      logger.info('User logout', {
+      console.log('*** LOGOUT SOLICITADO ***');
+
+      // Datos de depuración adicionales
+      console.log('Headers:', req.headers);
+      console.log('Ruta completa:', req.originalUrl);
+      console.log('Método:', req.method);
+
+      logger.info('*** User logout ***', {
         timestamp: new Date().toISOString(),
         ip: req.ip,
-        userAgent: req.get('User-Agent')
+        userAgent: req.get('User-Agent'),
+        path: req.originalUrl
       });
 
       res.json({

@@ -1,7 +1,7 @@
-import DashboardContentFixed from "@/components/DashboardContentFixed";
+import DashboardContent from "../components/DashboardContent";
 
 const Index = () => {
-  return <DashboardContentFixed />;
+  return <DashboardContent />;
 };
 
 export default Index;

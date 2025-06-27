@@ -7,8 +7,14 @@
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "components/*": ["./components/*"],
+      "contexts/*": ["./contexts/*"],
+      "hooks/*": ["./hooks/*"],
+      "lib/*": ["./lib/*"],
+      "pages/*": ["./pages/*"]
     },
+    "jsx": "react-jsx",
     "noImplicitAny": false,
     "noUnusedParameters": false,
     "skipLibCheck": true,

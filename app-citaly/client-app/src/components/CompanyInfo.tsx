@@ -1,10 +1,10 @@
 import { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { useAuth } from '@/contexts/AuthContext';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import { Label } from '../components/ui/label';
+import { Textarea } from '../components/ui/textarea';
+import { useAuth } from '../hooks/useAuth';
 import { Building, MapPin, Phone, Mail, FileText, Edit2, Save, X } from 'lucide-react';
 
 const CompanyInfo = () => {
@@ -56,7 +56,7 @@ const CompanyInfo = () => {
           <h2 className="text-2xl font-bold text-gray-900">Información de la Empresa</h2>
           <p className="text-gray-600">Gestiona los datos corporativos de tu empresa</p>
         </div>
-        
+
         {!isEditing ? (
           <Button onClick={() => setIsEditing(true)} className="flex items-center gap-2">
             <Edit2 className="h-4 w-4" />

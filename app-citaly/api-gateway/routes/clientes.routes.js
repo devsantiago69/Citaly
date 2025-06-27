@@ -1,11 +1,14 @@
 const express = require('express');
 const router = express.Router();
 const clientesController = require('../controllers/clientes.controller');
+const { verifyToken } = require('../middlewares/auth');
+
+router.use(verifyToken);
 
 // Rutas para clientes
-router.get('/empresa/:empresa_id', clientesController.getClientes);
-router.get('/empresa/:empresa_id/search', clientesController.searchClientes);
-router.get('/empresa/:empresa_id/estadisticas', clientesController.getEstadisticasClientes);
+router.get('/', clientesController.getClientes);
+router.get('/search', clientesController.searchClientes);
+router.get('/estadisticas', clientesController.getEstadisticasClientes);
 router.get('/:id', clientesController.getCliente);
 router.post('/', clientesController.createCliente);
 router.put('/:id', clientesController.updateCliente);

@@ -1,7 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const reportesController = require('../controllers/reportes.controller');
-const { validateRequired } = require('../middlewares/auth');
+const { verifyToken } = require('../middlewares/auth');
+
+router.use(verifyToken);
 
 /**
  * Rutas para reportes y estadísticas

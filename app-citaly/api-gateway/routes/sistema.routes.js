@@ -2,12 +2,12 @@ const express = require('express');
 const router = express.Router();
 const sistemaController = require('../controllers/sistema.controller');
 const soporteController = require('../controllers/soporte.controller');
-const { validateRequired, validateCompany } = require('../middlewares/auth');
+const { validateRequired, verifyToken } = require('../middlewares/auth');
 
 // ===== RUTAS DE SISTEMA =====
 
 // Búsqueda global
-router.get('/search', sistemaController.globalSearch);
+router.get('/search', verifyToken, sistemaController.globalSearch);
 
 // Países y estados
 router.get('/countries', sistemaController.getCountries);
@@ -21,7 +21,7 @@ router.post('/logout', sistemaController.logout);
 
 // ===== RUTAS DE SOPORTE =====
 // Aplicar middleware de validación de company para soporte
-router.use('/support-cases', validateCompany);
+router.use('/support-cases', verifyToken);
 
 // GET todos los casos de soporte
 router.get('/support-cases', soporteController.getSupportCases);

@@ -21,7 +21,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
-import { apiService } from "@/config/api-v2";
+import { api } from "@/config/api";
 
 interface ServiceCategory {
   id: number;
@@ -66,14 +66,13 @@ const ServiceManagement = () => {
 
   const fetchCategories = async () => {
     try {
-      // Usando llamada genÈrica para categorÌas de servicios
-      const data = await apiService.search.global({ entity: 'service-categories' });
+      const data = await api.get('/api/service-categories');
       setCategories(data);
     } catch (error) {
       console.error('Error fetching categories:', error);
       toast({
         title: "Error",
-        description: "No se pudieron cargar las categorÌas",
+        description: "No se pudieron cargar las categor√≠as",
         variant: "destructive",
       });
     }
@@ -81,7 +80,7 @@ const ServiceManagement = () => {
 
   const fetchServices = async () => {
     try {
-      const data = await apiService.services.list();
+      const data = await api.get('/api/services');
       setServices(data);
     } catch (error) {
       console.error('Error fetching services:', error);
@@ -109,7 +108,7 @@ const ServiceManagement = () => {
       });
       return;
     }
-
+    
     if (!newService.category_id) {
       toast({
         title: "Error",
@@ -141,15 +140,15 @@ const ServiceManagement = () => {
     try {
       const isEditing = editingServiceId !== null;
       if (isEditing) {
-        await apiService.services.update(editingServiceId.toString(), newService);
+        await api.put(`/api/services/${editingServiceId}`, newService);
       } else {
-        await apiService.services.create(newService);
+        await api.post('/api/services', newService);
       }
 
       await fetchServices();
-
+      
       toast({
-        title: "…xito",
+        title: "√âxito",
         description: isEditing ? "Servicio actualizado correctamente" : "Servicio creado correctamente",
       });
 
@@ -170,10 +169,10 @@ const ServiceManagement = () => {
 
   const handleDeleteService = async (id: number) => {
     try {
-      await apiService.services.delete(id.toString());
+      await api.delete(`/api/services/${id}`);
       await fetchServices();
       toast({
-        title: "…xito",
+        title: "√âxito",
         description: "Servicio eliminado correctamente",
       });
     } catch (error) {
@@ -215,7 +214,7 @@ const ServiceManagement = () => {
             Nuevo Servicio
           </Button>
         </div>
-
+        
         <div className="flex items-center gap-4">
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -236,7 +235,7 @@ const ServiceManagement = () => {
         <div className="text-center py-8">
           <p className="text-gray-500">No hay servicios disponibles</p>
         </div>
-      ) : services.filter(service =>
+      ) : services.filter(service => 
           service.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
           service.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
           service.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -256,7 +255,7 @@ const ServiceManagement = () => {
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {services
-                .filter(service =>
+                .filter(service => 
                   service.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                   service.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
                   service.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -320,8 +319,8 @@ const ServiceManagement = () => {
             </div>
           </CardContent>
         </Card>
-      )}      <Dialog
-        open={isDialogOpen}
+      )}      <Dialog 
+        open={isDialogOpen} 
         onOpenChange={(open) => {
           if (!open) {
             setNewService(initialServiceState);
@@ -340,9 +339,9 @@ const ServiceManagement = () => {
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label htmlFor="name">Nombre del servicio</Label>
-              <Input
-                id="name"
-                value={newService.name}
+              <Input 
+                id="name" 
+                value={newService.name} 
                 onChange={(e) => setNewService({...newService, name: e.target.value})}
                 disabled={loading}
                 placeholder="Ej: Corte de cabello"
@@ -350,9 +349,9 @@ const ServiceManagement = () => {
             </div>
             <div className="space-y-2">
               <Label htmlFor="description">Descripci√≥n</Label>
-              <Textarea
-                id="description"
-                value={newService.description}
+              <Textarea 
+                id="description" 
+                value={newService.description} 
                 onChange={(e) => setNewService({...newService, description: e.target.value})}
                 disabled={loading}
                 placeholder="Describe el servicio..."
@@ -361,10 +360,10 @@ const ServiceManagement = () => {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="duration">Duraci√≥n (min)</Label>
-                <Input
-                  id="duration"
-                  type="number"
-                  value={newService.duration}
+                <Input 
+                  id="duration" 
+                  type="number" 
+                  value={newService.duration} 
                   onChange={(e) => setNewService({...newService, duration: parseInt(e.target.value) || 0})}
                   disabled={loading}
                   min={0}
@@ -372,10 +371,10 @@ const ServiceManagement = () => {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="price">Precio</Label>
-                <Input
-                  id="price"
-                  type="number"
-                  value={newService.price}
+                <Input 
+                  id="price" 
+                  type="number" 
+                  value={newService.price} 
                   onChange={(e) => setNewService({...newService, price: parseFloat(e.target.value) || 0})}
                   disabled={loading}
                   min={0}
@@ -419,8 +418,8 @@ const ServiceManagement = () => {
               }}>
                 Cancelar
               </Button>
-              <Button
-                onClick={handleSaveService}
+              <Button 
+                onClick={handleSaveService} 
                 disabled={loading}
               >
                 {loading ? 'Guardando...' : (editingServiceId ? 'Actualizar' : 'Agregar')}

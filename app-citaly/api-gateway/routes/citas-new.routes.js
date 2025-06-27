@@ -1,6 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const citasNewController = require('../controllers/citas-new.controller');
+const { verifyToken } = require('../middlewares/auth');
+
+router.use(verifyToken);
 
 // Rutas para citas (nueva estructura)
 

@@ -1,11 +1,14 @@
 const express = require('express');
 const router = express.Router();
 const personalController = require('../controllers/personal.controller');
+const { verifyToken } = require('../middlewares/auth');
+
+router.use(verifyToken);
 
 // Rutas para personal
-router.get('/empresa/:empresa_id', personalController.getPersonal);
-router.get('/empresa/:empresa_id/estadisticas', personalController.getEstadisticasPersonal);
-router.get('/empresa/:empresa_id/servicio/:servicio_id/disponible', personalController.getPersonalDisponible);
+router.get('/', personalController.getPersonal);
+router.get('/estadisticas', personalController.getEstadisticasPersonal);
+router.get('/servicio/:servicio_id/disponible', personalController.getPersonalDisponible);
 router.get('/:id', personalController.getPersonalById);
 router.post('/', personalController.createPersonal);
 router.put('/:id', personalController.updatePersonal);

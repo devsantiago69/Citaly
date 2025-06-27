@@ -20,7 +20,6 @@ import { Textarea } from "./ui/textarea";
 import { Badge } from "./ui/badge";
 import { useToast } from "./ui/use-toast";
 import { Switch } from "./ui/switch";
-import { apiService } from "@/config/api-v2";
 import {
   Popover,
   PopoverContent,
@@ -63,13 +62,13 @@ const SpecialtyManagement = () => {
   // Función para resaltar texto coincidente
   const highlightMatch = (text: string, searchTerm: string) => {
     if (!searchTerm.trim()) return text;
-
+    
     const regex = new RegExp(`(${searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
     const parts = text.split(regex);
-
-    return parts.map((part, index) =>
-      regex.test(part) ?
-        <mark key={index} className="bg-yellow-200 text-yellow-900 px-0.5 rounded">{part}</mark> :
+    
+    return parts.map((part, index) => 
+      regex.test(part) ? 
+        <mark key={index} className="bg-yellow-200 text-yellow-900 px-0.5 rounded">{part}</mark> : 
         part
     );
   };
@@ -77,16 +76,16 @@ const SpecialtyManagement = () => {
   // Generar sugerencias de búsqueda
   const getSearchSuggestions = () => {
     if (!searchTerm || searchTerm.length < 2) return [];
-
+    
     const allWords = specialties.flatMap(specialty => [
       ...specialty.name.toLowerCase().split(' '),
       ...specialty.description.toLowerCase().split(' ')
-    ]).filter(word =>
-      word.length > 2 &&
-      word.includes(searchTerm.toLowerCase()) &&
+    ]).filter(word => 
+      word.length > 2 && 
+      word.includes(searchTerm.toLowerCase()) && 
       word !== searchTerm.toLowerCase()
     );
-
+    
     const uniqueWords = [...new Set(allWords)];
     return uniqueWords.slice(0, 5); // Máximo 5 sugerencias
   };
@@ -103,23 +102,23 @@ const SpecialtyManagement = () => {
     // Filtro por texto de búsqueda (más avanzado)
     if (searchValue.trim()) {
       const searchLower = searchValue.toLowerCase();
-      filtered = filtered.filter(specialty =>
+      filtered = filtered.filter(specialty => 
         // Búsqueda en nombre
         specialty.name.toLowerCase().includes(searchLower) ||
         // Búsqueda en descripción
         specialty.description.toLowerCase().includes(searchLower) ||
         // Búsqueda por palabras individuales
-        searchLower.split(' ').some(word =>
+        searchLower.split(' ').some(word => 
           word.length > 1 && (
             specialty.name.toLowerCase().includes(word) ||
             specialty.description.toLowerCase().includes(word)
           )
         ) ||
         // Búsqueda por coincidencia parcial al inicio de palabras
-        specialty.name.toLowerCase().split(' ').some(word =>
+        specialty.name.toLowerCase().split(' ').some(word => 
           word.startsWith(searchLower)
         ) ||
-        specialty.description.toLowerCase().split(' ').some(word =>
+        specialty.description.toLowerCase().split(' ').some(word => 
           word.startsWith(searchLower)
         )
       );
@@ -127,7 +126,7 @@ const SpecialtyManagement = () => {
 
     // Filtro por estado
     if (status !== "all") {
-      filtered = filtered.filter(specialty =>
+      filtered = filtered.filter(specialty => 
         status === "active" ? specialty.active : !specialty.active
       );
     }
@@ -177,9 +176,15 @@ const SpecialtyManagement = () => {
   };
 
   const fetchSpecialties = async () => {
-    console.log('🔝 Fetching specialties...');
+    console.log('🔍 Fetching specialties...');
     try {
-      const data = await apiService.specialties.list();
+      const response = await fetch('/api/specialties');
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch specialties');
+      }
+      
+      const data = await response.json();
       console.log('📦 Specialties received:', data);
       setSpecialties(data);
       setFilteredSpecialties(data);
@@ -215,15 +220,24 @@ const SpecialtyManagement = () => {
 
     setLoading(true);
     try {
-      await apiService.specialties.create(newSpecialty);
-      await fetchSpecialties();
+      const response = await fetch('/api/specialties', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(newSpecialty),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create specialty');
+      }      await fetchSpecialties();
       setNewSpecialty({
         name: "",
         description: "",
         active: true
       });
       setIsDialogOpen(false);
-
+      
       toast({
         title: "Éxito",
         description: "Especialidad creada correctamente",
@@ -253,16 +267,25 @@ const SpecialtyManagement = () => {
 
     setLoading(true);
     try {
-      await apiService.specialties.update(editingSpecialty.id.toString(), {
-        name: editingSpecialty.name,
-        description: editingSpecialty.description,
-        active: editingSpecialty.active
+      const response = await fetch(`/api/specialties/${editingSpecialty.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },        body: JSON.stringify({
+          name: editingSpecialty.name,
+          description: editingSpecialty.description,
+          active: editingSpecialty.active
+        }),
       });
+
+      if (!response.ok) {
+        throw new Error('Failed to update specialty');
+      }
 
       await fetchSpecialties();
       setIsDialogOpen(false);
       setEditingSpecialty(null);
-
+      
       toast({
         title: "Éxito",
         description: "Especialidad actualizada correctamente",
@@ -281,27 +304,35 @@ const SpecialtyManagement = () => {
 
   const handleDeleteSpecialty = async (id: number) => {
     try {
-      await apiService.specialties.delete(id.toString());
+      const response = await fetch(`/api/specialties/${id}`, {
+        method: 'DELETE',
+      });
+      
+      if (!response.ok) {
+        if (response.status === 400) {
+          const error = await response.json();
+          toast({
+            title: "No se puede eliminar",
+            description: error.error,
+            variant: "destructive",
+          });
+          return;
+        }
+        throw new Error('Failed to delete specialty');
+      }
+      
       await fetchSpecialties();
       toast({
-        title: "�xito",
+        title: "Éxito",
         description: "Especialidad eliminada correctamente",
       });
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error deleting specialty:", error);
-      if (error.message && error.message.includes('400')) {
-        toast({
-          title: "No se puede eliminar",
-          description: "La especialidad est� siendo utilizada por personal activo",
-          variant: "destructive",
-        });
-      } else {
-        toast({
-          title: "Error",
-          description: "No se pudo eliminar la especialidad",
-          variant: "destructive",
-        });
-      }
+      toast({
+        title: "Error",
+        description: "No se pudo eliminar la especialidad",
+        variant: "destructive",
+      });
     }
   };
 
@@ -343,8 +374,8 @@ const SpecialtyManagement = () => {
           <div className="flex gap-2">
             <Popover open={showFilters} onOpenChange={setShowFilters}>
               <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
+                <Button 
+                  variant="outline" 
                   className={`${(filterStatus !== "all" || sortBy !== "name") ? "bg-blue-50 border-blue-200" : ""}`}
                 >
                   <SlidersHorizontal className="h-4 w-4 mr-2" />
@@ -371,7 +402,7 @@ const SpecialtyManagement = () => {
                       </SelectContent>
                     </Select>
                   </div>
-
+                  
                   <div className="space-y-2">
                     <Label className="text-sm font-medium">Ordenar por</Label>
                     <Select value={sortBy} onValueChange={handleSortChange}>
@@ -388,9 +419,9 @@ const SpecialtyManagement = () => {
 
                   {(filterStatus !== "all" || sortBy !== "name" || searchTerm) && (
                     <div className="pt-2 border-t">
-                      <Button
-                        variant="ghost"
-                        size="sm"
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
                         onClick={clearAllFilters}
                         className="w-full"
                       >
@@ -523,9 +554,9 @@ const SpecialtyManagement = () => {
           {filteredSpecialties.map((specialty, index) => (
             <Card key={specialty.id} className="flex flex-col hover:shadow-md transition-all duration-200 hover:scale-[1.02]">
               <CardHeader>
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between">                  
                   <div className="flex items-center gap-3">
-                    <div
+                    <div 
                       className="w-4 h-4 rounded-full border-2 border-white shadow-sm"
                       style={{ backgroundColor: '#3B82F6' }}
                     />
@@ -541,12 +572,12 @@ const SpecialtyManagement = () => {
                 </div>
               </CardHeader>
               <CardContent className="flex-1">                <p className="text-gray-600 text-sm leading-relaxed mb-4">
-                  {specialty.description ?
-                    highlightMatch(specialty.description, searchTerm) :
+                  {specialty.description ? 
+                    highlightMatch(specialty.description, searchTerm) : 
                     <span className="italic">Sin descripción</span>
                   }
                 </p>
-
+                
                 {/* Información adicional */}
                 <div className="text-xs text-gray-400 mb-4 space-y-1">
                   <div className="flex justify-between">
@@ -560,10 +591,10 @@ const SpecialtyManagement = () => {
                     </span>
                   </div>
                 </div>
-
+                
                 <div className="flex gap-2 mt-auto">
-                  <Button
-                    variant="outline"
+                  <Button 
+                    variant="outline" 
                     size="sm"
                     onClick={() => {
                       setEditingSpecialty(specialty);
@@ -573,9 +604,9 @@ const SpecialtyManagement = () => {
                   >
                     <Edit className="h-3 w-3 mr-1" /> Editar
                   </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
                     className="text-red-600 hover:text-red-700 hover:bg-red-50 hover:border-red-200"
                     onClick={() => handleDeleteSpecialty(specialty.id)}
                   >
@@ -603,10 +634,10 @@ const SpecialtyManagement = () => {
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label htmlFor="name">Nombre de la especialidad *</Label>
-              <Input
-                id="name"
-                value={editingSpecialty ? editingSpecialty.name : newSpecialty.name}
-                onChange={(e) => editingSpecialty ?
+              <Input 
+                id="name" 
+                value={editingSpecialty ? editingSpecialty.name : newSpecialty.name} 
+                onChange={(e) => editingSpecialty ? 
                   setEditingSpecialty({...editingSpecialty, name: e.target.value}) :
                   setNewSpecialty({...newSpecialty, name: e.target.value})
                 }
@@ -615,9 +646,9 @@ const SpecialtyManagement = () => {
               />
             </div>            <div className="space-y-2">
               <Label htmlFor="description">Descripción</Label>
-              <Textarea
-                id="description"
-                value={editingSpecialty ? editingSpecialty.description : newSpecialty.description}
+              <Textarea 
+                id="description" 
+                value={editingSpecialty ? editingSpecialty.description : newSpecialty.description} 
                 onChange={(e) => editingSpecialty ?
                   setEditingSpecialty({...editingSpecialty, description: e.target.value}) :
                   setNewSpecialty({...newSpecialty, description: e.target.value})
@@ -632,7 +663,7 @@ const SpecialtyManagement = () => {
                 <Switch
                   id="active"
                   checked={editingSpecialty.active}
-                  onCheckedChange={(checked) =>
+                  onCheckedChange={(checked) => 
                     setEditingSpecialty({...editingSpecialty, active: checked})
                   }
                 />
