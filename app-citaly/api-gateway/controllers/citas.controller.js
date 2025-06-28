@@ -1,7 +1,7 @@
 const db = require('../config/db');
 const logger = require('../logger');
 
-// Función para obtener socketManager y webhookManager
+// Funciï¿½n para obtener socketManager y webhookManager
 const getManagers = (req) => {
   const socketManager = req.app.get('socketManager');
   const webhookManager = req.app.get('webhookManager');
@@ -20,8 +20,8 @@ const getCitas = async (req, res) => {
       sucursal_id,
       page = 1,
       limit = 10,
-      status, // Agregamos parámetro status que viene del frontend
-      date    // Agregamos parámetro date que viene del frontend
+      status, // Agregamos parï¿½metro status que viene del frontend
+      date    // Agregamos parï¿½metro date que viene del frontend
     } = req.query;
 
     logger.info('GET /api/appointments - Request received', {
@@ -41,12 +41,12 @@ const getCitas = async (req, res) => {
     let whereClause = 'WHERE c.empresa_id = ?';
     const queryParams = [company_id];
 
-    // Manejamos el parámetro date (fecha) del frontend
+    // Manejamos el parï¿½metro date (fecha) del frontend
     if (date) {
       whereClause += ' AND c.fecha = ?';
       queryParams.push(date);
     }
-    // Si no hay date, usamos los parámetros tradicionales
+    // Si no hay date, usamos los parï¿½metros tradicionales
     else if (fecha) {
       whereClause += ' AND c.fecha = ?';
       queryParams.push(fecha);
@@ -55,14 +55,14 @@ const getCitas = async (req, res) => {
       queryParams.push(fecha_inicio, fecha_fin);
     }
 
-    // Manejamos el parámetro status del frontend
+    // Manejamos el parï¿½metro status del frontend
     if (status) {
-      // Si contiene comas, significa múltiples estados
+      // Si contiene comas, significa mï¿½ltiples estados
       if (status.includes(',')) {
         const statusList = status.split(',').map(s => s.trim());
 
         // Para MySQL, necesitamos manejar cada valor individualmente en lugar de usar IN
-        // con una lista de parámetros, ya que puede causar problemas
+        // con una lista de parï¿½metros, ya que puede causar problemas
         whereClause += ' AND (';
         const statusConditions = statusList.map((_, index) => {
           return 'c.estado = ?';
@@ -70,14 +70,14 @@ const getCitas = async (req, res) => {
         whereClause += statusConditions.join(' OR ');
         whereClause += ')';
 
-        // Añadir cada valor de estado como un parámetro individual
+        // Aï¿½adir cada valor de estado como un parï¿½metro individual
         statusList.forEach(s => queryParams.push(s));
       } else {
         whereClause += ' AND c.estado = ?';
         queryParams.push(status);
       }
     }
-    // Si no hay status, usamos el parámetro tradicional
+    // Si no hay status, usamos el parï¿½metro tradicional
     else if (estado) {
       whereClause += ' AND c.estado = ?';
       queryParams.push(estado);
@@ -129,10 +129,12 @@ const getCitas = async (req, res) => {
       LIMIT ? OFFSET ?
     `;
 
+    logger.info('[CITAS] getCitas - Query:', { query });
     // Filtrar cualquier valor undefined o null de los queryParams
     const filteredQueryParams = queryParams.filter(param => param !== undefined && param !== null);
 
     const [results] = await db.execute(query, [...filteredQueryParams, parseInt(limit), offset]);
+    logger.info('[CITAS] getCitas - Result:', results);
 
     // Obtener total de registros
     const countQuery = `
@@ -302,7 +304,7 @@ const createCita = async (req, res) => {
 
     const { company_id, id: creado_por } = req.user;
 
-    // Validaciones básicas
+    // Validaciones bï¿½sicas
     if (!cliente_id || !servicio_id || !sucursal_id || !fecha || !hora) {
       return res.status(400).json({
         success: false,
@@ -334,7 +336,7 @@ const createCita = async (req, res) => {
       });
     }
 
-    // Verificar que el servicio está disponible en la sucursal
+    // Verificar que el servicio estï¿½ disponible en la sucursal
     const [servicioSucursal] = await db.execute(
       'SELECT * FROM servicios_sucursal WHERE servicio_id = ? AND sucursal_id = ? AND estado = "Activo"',
       [servicio_id, sucursal_id]
@@ -542,10 +544,19 @@ const deleteCita = async (req, res) => {
   }
 };
 
-// GET estadísticas de citas
+// GET estadï¿½sticas de citas
 const getEstadisticasCitas = async (req, res) => {
   try {
-    const { empresa_id } = req.params;
+    const { company_id } = req.user;
+    const { start_date, end_date } = req.query;
+
+    let whereClause = 'WHERE empresa_id = ?';
+    const params = [company_id];
+
+    if (start_date && end_date) {
+      whereClause += ' AND fecha BETWEEN ? AND ?';
+      params.push(start_date, end_date);
+    }
 
     const [stats] = await db.execute(`
       SELECT
@@ -558,8 +569,8 @@ const getEstadisticasCitas = async (req, res) => {
         COUNT(CASE WHEN WEEK(fecha) = WEEK(CURRENT_DATE) THEN 1 END) as esta_semana,
         COUNT(CASE WHEN MONTH(fecha) = MONTH(CURRENT_DATE) THEN 1 END) as este_mes
       FROM citas
-      WHERE empresa_id = ?
-    `, [empresa_id]);
+      ${whereClause}
+    `, params);
 
     res.json({
       success: true,
@@ -620,22 +631,22 @@ const getCitasPorSucursal = async (req, res) => {
   }
 };
 
-// GET eventos de calendario (implementación básica para evitar error de callback undefined)
+// GET eventos de calendario (implementaciï¿½n bï¿½sica para evitar error de callback undefined)
 const getAppointmentsCalendar = async (req, res) => {
   try {
-    // Aquí puedes implementar la lógica real según el modelo de tu base de datos
-    // Por ahora, se devuelve un array vacío para evitar errores
+    // Aquï¿½ puedes implementar la lï¿½gica real segï¿½n el modelo de tu base de datos
+    // Por ahora, se devuelve un array vacï¿½o para evitar errores
     res.json({ success: true, data: [] });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Error interno del servidor', error: error.message });
   }
 };
 
-// GET filtros para citas (implementación básica para evitar error de callback undefined)
+// GET filtros para citas (implementaciï¿½n bï¿½sica para evitar error de callback undefined)
 const getAppointmentsFilters = async (req, res) => {
   try {
-    // Aquí puedes implementar la lógica real según el modelo de tu base de datos
-    // Por ahora, se devuelve un objeto vacío para evitar errores
+    // Aquï¿½ puedes implementar la lï¿½gica real segï¿½n el modelo de tu base de datos
+    // Por ahora, se devuelve un objeto vacï¿½o para evitar errores
     res.json({ success: true, data: {} });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Error interno del servidor', error: error.message });

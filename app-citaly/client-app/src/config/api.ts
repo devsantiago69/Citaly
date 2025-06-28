@@ -18,7 +18,13 @@ export const api = {
         if (options && options.params) {
             url += buildQueryString(options.params);
         }
-        const response = await fetch(url);
+        // Agregar header Authorization si hay token
+        const headers: Record<string, string> = {};
+        const token = localStorage.getItem('token');
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+        }
+        const response = await fetch(url, { headers });
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }

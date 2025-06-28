@@ -4,7 +4,7 @@ const logger = require('../logger');
 // GET clientes
 const getClientes = async (req, res) => {
   try {
-    logger.info('GET /api/clients - Request received', { query: req.query });
+    logger.info('[USUARIOS] getClientes - Params:', req.params, 'Query:', req.query);
 
     const {
       searchTerm,
@@ -74,42 +74,36 @@ const getClientes = async (req, res) => {
 
     query += ` ORDER BY ${finalSortBy} ${finalSortOrder}`;
 
-    db.query(query, queryParams, (err, results) => {
-      if (err) {
-        logger.error('Error fetching clients', {
-          error: err.message,
-          stack: err.stack
-        });
-        return res.status(500).json({ error: 'Error al cargar los clientes' });
-      }
+    logger.info('[USUARIOS] getClientes - Query:', { query });
+    const [rows] = await db.execute(query, queryParams);
+    logger.info('[USUARIOS] getClientes - Result:', rows);
 
-      // Formatear las preferencias de comunicación y las fechas
-      const formattedResults = results.map(client => ({
-        ...client,
-        communication_preferences: client.communication_preferences
-          ? client.communication_preferences.split(',')
-          : [],
-        birth_date: client.birth_date ? new Date(client.birth_date).toISOString().split('T')[0] : null,
-        last_visit: client.last_visit ? new Date(client.last_visit).toISOString().split('T')[0] : null,
-        created_at: new Date(client.created_at).toISOString(),
-        updated_at: client.updated_at ? new Date(client.updated_at).toISOString() : null,
-        total_appointments: Number(client.total_appointments) || 0,
-        completed_appointments: Number(client.completed_appointments) || 0,
-        cancelled_appointments: Number(client.cancelled_appointments) || 0,
-        total_spent: Number(client.total_spent) || 0,
-        avg_rating: client.avg_rating ? Number(client.avg_rating) : null
-      }));
+    // Formatear las preferencias de comunicaciï¿½n y las fechas
+    const formattedResults = rows.map(client => ({
+      ...client,
+      communication_preferences: client.communication_preferences
+        ? client.communication_preferences.split(',')
+        : [],
+      birth_date: client.birth_date ? new Date(client.birth_date).toISOString().split('T')[0] : null,
+      last_visit: client.last_visit ? new Date(client.last_visit).toISOString().split('T')[0] : null,
+      created_at: new Date(client.created_at).toISOString(),
+      updated_at: client.updated_at ? new Date(client.updated_at).toISOString() : null,
+      total_appointments: Number(client.total_appointments) || 0,
+      completed_appointments: Number(client.completed_appointments) || 0,
+      cancelled_appointments: Number(client.cancelled_appointments) || 0,
+      total_spent: Number(client.total_spent) || 0,
+      avg_rating: client.avg_rating ? Number(client.avg_rating) : null
+    }));
 
-      logger.info('Clients fetched successfully', {
-        count: formattedResults.length,
-        timestamp: new Date().toISOString()
-      });
-
-      res.json(formattedResults);
+    logger.info('Clients fetched successfully', {
+      count: formattedResults.length,
+      timestamp: new Date().toISOString()
     });
+
+    res.json(formattedResults);
   } catch (error) {
-    logger.error('Error in getClientes:', error);
-    res.status(500).json({ error: 'Error interno del servidor' });
+    logger.error('[USUARIOS] Error in getClientes:', error);
+    res.status(500).json({ error: 'Error al obtener clientes', details: error.message });
   }
 };
 
@@ -236,7 +230,7 @@ const createCliente = async (req, res) => {
         return res.status(500).json({ error: 'Error al crear el cliente' });
       }
 
-      // Obtener el cliente recién creado
+      // Obtener el cliente reciï¿½n creado
       const getNewClientQuery = `
         SELECT * FROM clients WHERE id = ? AND company_id = ?
       `;
@@ -300,7 +294,7 @@ const updateCliente = async (req, res) => {
       status
     } = req.body;
 
-    // Formatear preferencias de comunicación
+    // Formatear preferencias de comunicaciï¿½n
     const validPreferences = ['email', 'sms', 'whatsapp', 'phone'];
     const formattedPreferences = Array.isArray(communication_preferences)
       ? communication_preferences.filter(pref => validPreferences.includes(pref))

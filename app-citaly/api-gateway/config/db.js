@@ -2,7 +2,7 @@ const mysql = require('mysql2/promise');
 const logger = require('../logger');
 require('dotenv').config();
 
-// Crear conexi�n a la base de datos existente (pool con soporte async/await)
+// Crear conexión a la base de datos existente (pool con soporte async/await)
 const pool = mysql.createPool({
   host: process.env.DB_HOST || 'localhost',
   user: process.env.DB_USER || 'root',
@@ -10,11 +10,11 @@ const pool = mysql.createPool({
   database: process.env.DB_NAME || 'citaly',
   waitForConnections: true,
   connectionLimit: 10,
-  acquireTimeout: 60000,
-  // timeout y reconnect no son v�lidos para mysql2/promise
+  acquireTimeout: 60000, // Tiempo máximo de espera para adquirir una conexión (válido en mysql2)
+  // timeout y reconnect no son válidos para mysql2/promise, no incluirlos
 });
 
-// Verificar la conexi�n
+// Verificar la conexión
 (async () => {
   try {
     const connection = await pool.getConnection();

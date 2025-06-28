@@ -6,7 +6,7 @@ const { verifyToken } = require('../middlewares/auth');
 router.use(verifyToken);
 
 /**
- * Rutas para reportes y estadísticas
+ * Rutas para reportes y estadï¿½sticas
  */
 
 // GET /api/reports/overview - Resumen general
@@ -39,7 +39,7 @@ router.get('/sales-by-month',
   reportesController.getSalesByMonth
 );
 
-// GET /api/reports/appointments-status-by-day - Estado de citas por día
+// GET /api/reports/appointments-status-by-day - Estado de citas por dï¿½a
 router.get('/appointments-status-by-day',
   reportesController.getAppointmentsStatusByDay
 );
@@ -48,5 +48,11 @@ router.get('/appointments-status-by-day',
 router.get('/services-completion-ratio',
   reportesController.getServicesCompletionRatio
 );
+
+// Aliases en espaÃ±ol para compatibilidad
+router.get('/servicios', reportesController.getServices); // /api/reports/servicios
+router.get('/citas/estado', reportesController.getAppointmentsStatusByDay); // /api/reports/citas/estado
+router.get('/servicios/completados', reportesController.getServicesCompletionRatio); // /api/reports/servicios/completados
+router.get('/ingresos', reportesController.getRevenue); // /api/reports/ingresos
 
 module.exports = router;

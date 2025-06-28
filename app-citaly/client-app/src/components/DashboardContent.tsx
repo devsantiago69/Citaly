@@ -22,7 +22,7 @@ interface Appointment {
   service: { id: number; name: string; duration: number; price: number; category: string };
   date: string;
   time: string;
-  status: 'scheduled' | 'confirmed' | 'completed' | 'cancelled' | 'in_progress';
+  status: 'Programada' | 'Confirmada' | 'Completada' | 'Cancelada' | 'En progreso' | 'Pendiente';
   channel?: 'online' | 'presencial' | 'whatsapp' | 'phone';
   notes?: string;
 }
@@ -175,7 +175,7 @@ const DashboardContent = () => {
     try {
       const services = await apiService.services.list();
       console.log('Services fetched:', services);
-      setAllServices(Array.isArray(services) ? services : []);
+      setAllServices(Array.isArray(services) ? services : Object.values(services));
     } catch (error) {
       console.error('Error fetching services:', error);
       setAllServices([]);
@@ -183,32 +183,127 @@ const DashboardContent = () => {
   };
 
   // Funci�n para obtener citas pr�ximas (sin filtros)
+  // Adaptador para transformar la cita del backend al formato Appointment
+  function adaptAppointment(raw: any): Appointment {
+    // Log para ver el objeto crudo recibido
+    if (!raw || typeof raw !== 'object') {
+      console.warn('[Adaptador] Objeto inválido:', raw);
+      throw new Error('Objeto inválido');
+    }
+    // Mostrar todos los campos recibidos
+    // Log siempre activo para depuración en frontend
+    console.log('[Adaptador] Campos recibidos:', Object.keys(raw));
+    return {
+      id: raw.id ?? raw._id ?? 0,
+      date: raw.fecha ?? raw.date ?? '',
+      time: raw.hora ?? raw.time ?? '',
+      status: raw.estado ?? raw.status ?? '',
+      notes: raw.notas ?? raw.notes ?? '',
+      channel: (raw.canal ?? raw.channel ?? '').toLowerCase(),
+      client: {
+        id: raw.cliente_id ?? raw.client_id ?? 0,
+        name: raw.cliente_nombre_completo ?? raw.cliente_nombres ?? raw.client_name ?? '',
+        phone: raw.cliente_telefono ?? raw.client_phone ?? '',
+        email: raw.cliente_email ?? raw.client_email ?? ''
+      },
+      service: {
+        id: raw.servicio_id ?? raw.service_id ?? 0,
+        name: raw.servicio_nombre ?? raw.service_name ?? '',
+        duration: Number(raw.servicio_duracion ?? raw.service_duration) || 0,
+        price: Number(raw.servicio_precio_base ?? raw.servicio_precio ?? raw.service_price) || 0,
+        category: raw.categoria_nombre ?? raw.service_category ?? 'General'
+      }
+    };
+  }
+
+  // Estado para debug: citas crudas del backend
+  const [rawAppointments, setRawAppointments] = useState<any[]>([]);
+
   const fetchUpcomingAppointments = async () => {
     try {
       const today = format(new Date(), 'yyyy-MM-dd');
-      let appointments = [];
-
+      let appointments: any[] = [];
+      let fetched = false;
       try {
-        // Intentar obtener citas espec�ficas del d�a
-        appointments = await apiService.appointments.list({ date: today, status: 'scheduled,confirmed' });
-      } catch {
-        // Si falla, obtener todas las citas y filtrar
-        const allAppointments = await apiService.appointments.list();
-        appointments = allAppointments.filter((app: Appointment) =>
-          app.date.startsWith(today) && ['scheduled', 'confirmed'].includes(app.status)
-        );
+        appointments = await apiService.appointments.list({ date: today, status: 'Programada,Confirmada' });
+        console.log('[API] Citas del día:', appointments);
+        appointments = Array.isArray(appointments) ? appointments : Object.values(appointments);
+        fetched = appointments.length > 0;
+      } catch (err) {
+        console.log('[API] Error fetch citas del día:', err);
       }
-
-      const processedAppointments = (Array.isArray(appointments) ? appointments : [])
-        .map((app: Appointment) => app)
-        .sort((a: Appointment, b: Appointment) => (a.time || '').localeCompare(b.time || ''))
+      // Si no se obtuvieron citas del día, buscar todas y filtrar localmente
+      if (!fetched || appointments.length === 0) {
+        const allAppointments = await apiService.appointments.list();
+        console.log('[API] Todas las citas:', allAppointments);
+        const allAppointmentsArr: any[] = Array.isArray(allAppointments) ? allAppointments : Object.values(allAppointments);
+        // LOGS DETALLADOS DE FILTRADO
+        const debugFilter: { id: any; fecha: any; estado: any; motivo: string }[] = [];
+        appointments = allAppointmentsArr.filter((app: any) => {
+          const rawFecha = app.fecha || '';
+          const rawEstado = (app.estado || '').trim();
+          const fechaMatch = rawFecha.startsWith(today);
+          const estadoMatch = ['Programada', 'Confirmada'].includes(rawEstado);
+          if (!fechaMatch || !estadoMatch) {
+            debugFilter.push({
+              id: app.id,
+              fecha: rawFecha,
+              estado: rawEstado,
+              motivo: !fechaMatch ? 'Fecha no coincide' : 'Estado no válido',
+            });
+          }
+          return fechaMatch && estadoMatch;
+        });
+        console.log('[Filtro] Citas del día tras filtrar:', appointments);
+        if (debugFilter.length > 0) {
+          console.log('[Filtro] Citas excluidas:', debugFilter);
+        }
+      } else {
+        // Si sí se obtuvieron, igual loguear motivos de exclusión
+        const debugFilter: { id: any; fecha: any; estado: any; motivo: string }[] = [];
+        appointments = appointments.filter((app: any) => {
+          const rawFecha = app.fecha || '';
+          const rawEstado = (app.estado || '').trim();
+          const fechaMatch = rawFecha.startsWith(today);
+          const estadoMatch = ['Programada', 'Confirmada'].includes(rawEstado);
+          if (!fechaMatch || !estadoMatch) {
+            debugFilter.push({
+              id: app.id,
+              fecha: rawFecha,
+              estado: rawEstado,
+              motivo: !fechaMatch ? 'Fecha no coincide' : 'Estado no válido',
+            });
+          }
+          return fechaMatch && estadoMatch;
+        });
+        if (debugFilter.length > 0) {
+          console.log('[Filtro directo] Citas excluidas:', debugFilter);
+        }
+      }
+      setRawAppointments(appointments); // Guardar para debug
+      // Adaptar los datos al formato Appointment
+      const appointmentsArr: Appointment[] = appointments
+        .filter(app => typeof app === 'object' && app !== null && 'id' in app)
+        .map((app) => {
+          try {
+            return adaptAppointment(app);
+          } catch (e) {
+            console.log('[Adaptador] Error adaptando cita:', app, e);
+            return null;
+          }
+        })
+        .filter((a): a is Appointment => a !== null)
+        .sort((a, b) => {
+          if (!a || !b) return 0;
+          return (a.time || '').localeCompare(b.time || '');
+        })
         .slice(0, 6);
-
-      console.log('Upcoming appointments:', processedAppointments);
-      setUpcomingAppointments(processedAppointments);
+      console.log('[Render] processedAppointments:', appointmentsArr);
+      setUpcomingAppointments(appointmentsArr);
     } catch (error) {
       console.error('Error fetching upcoming appointments:', error);
       setUpcomingAppointments([]);
+      setRawAppointments([]);
     }
   };
   // Función para obtener datos filtrados - completamente rediseñada
@@ -234,13 +329,12 @@ const DashboardContent = () => {
         apiService.reports.revenue(),
         apiService.appointments.list()
       ]);
-
       // Procesar y validar resultados
-      const topServicesData = topServicesResult.status === 'fulfilled' ? topServicesResult.value : [];
-      const appointmentsStatusData = appointmentsStatusResult.status === 'fulfilled' ? appointmentsStatusResult.value : [];
+      const topServicesData = topServicesResult.status === 'fulfilled' ? (Array.isArray(topServicesResult.value) ? topServicesResult.value : Object.values(topServicesResult.value)) : [];
+      const appointmentsStatusData = appointmentsStatusResult.status === 'fulfilled' ? (Array.isArray(appointmentsStatusResult.value) ? appointmentsStatusResult.value : Object.values(appointmentsStatusResult.value)) : [];
       const completionRatioData = completionRatioResult.status === 'fulfilled' ? completionRatioResult.value : null;
-      const revenueByChannelData = revenueByChannelResult.status === 'fulfilled' ? revenueByChannelResult.value : [];
-      const allAppointmentsData = allAppointmentsResult.status === 'fulfilled' ? allAppointmentsResult.value : [];
+      const revenueByChannelData = revenueByChannelResult.status === 'fulfilled' ? (Array.isArray(revenueByChannelResult.value) ? revenueByChannelResult.value : Object.values(revenueByChannelResult.value)) : [];
+      const allAppointmentsData = allAppointmentsResult.status === 'fulfilled' ? (Array.isArray(allAppointmentsResult.value) ? allAppointmentsResult.value : Object.values(allAppointmentsResult.value)) : [];
 
       console.log('📊 Datos obtenidos:', {
         topServices: topServicesData?.length || 0,
@@ -252,7 +346,7 @@ const DashboardContent = () => {
 
       // Procesar servicios populares con datos filtrados
       const processedPopularServices = processPopularServices(allAppointmentsData);
-      setPopularServices(processedPopularServices);
+      setPopularServices(Array.isArray(processedPopularServices) ? processedPopularServices : Object.values(processedPopularServices));
 
       // Formatear y establecer datos de gráficos
       const formattedTopServices = formatTopServicesData(topServicesData);
@@ -274,7 +368,7 @@ const DashboardContent = () => {
 
     } catch (error) {
       console.error('? Error al cargar datos del dashboard:', error);
-      setError('Error al cargar los datos del dashboard. Intenta actualizar la p�gina.');
+      setError('Error al cargar los datos del dashboard. Intenta actualizar la p�gina.');
       toast.error('Error al cargar los datos del dashboard');
     } finally {
       setLoading(false);
@@ -746,8 +840,8 @@ const DashboardContent = () => {
                   sideOffset={4}
                 >
                   <SelectItem value="all">Todas las categorías</SelectItem>
-                  {getUniqueCategories().map(category => (
-                    <SelectItem key={category} value={category}>{category}</SelectItem>
+                  {getUniqueCategories().map((category, idx) => (
+                    <SelectItem key={`cat-${category}-${idx}`} value={category}>{category}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -765,13 +859,13 @@ const DashboardContent = () => {
                 >
                   <SelectItem value="all">Todos los servicios</SelectItem>
                   {allServices.map(s => (
-                    <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
+                    <SelectItem key={`service-${s.id}`} value={s.name}>{s.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
 
               <Select value={filters.status} onValueChange={handleStatusChange}>
-                <SelectTrigger className="w-[130px] bg-white hover:bg-gray-50">
+                <SelectTrigger className="w-[150px] bg-white hover:bg-gray-50">
                   <SelectValue placeholder="Estado" />
                 </SelectTrigger>
                 <SelectContent
@@ -782,11 +876,11 @@ const DashboardContent = () => {
                   sideOffset={4}
                 >
                   <SelectItem value="all">Todos los estados</SelectItem>
-                  <SelectItem value="scheduled">Programado</SelectItem>
-                  <SelectItem value="confirmed">Confirmado</SelectItem>
-                  <SelectItem value="completed">Completado</SelectItem>
-                  <SelectItem value="cancelled">Cancelado</SelectItem>
-                  <SelectItem value="in_progress">En progreso</SelectItem>
+                  <SelectItem value="Programada">Programada</SelectItem>
+                  <SelectItem value="Confirmada">Confirmada</SelectItem>
+                  <SelectItem value="Completada">Completada</SelectItem>
+                  <SelectItem value="Cancelada">Cancelada</SelectItem>
+                  <SelectItem value="Pendiente">Pendiente</SelectItem>
                 </SelectContent>
               </Select>
 
@@ -818,6 +912,7 @@ const DashboardContent = () => {
       <div className="mb-4" />
       <StatsCards />
 
+      {/* Mostrar próximas citas */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card className="bg-white shadow-sm">
           <CardHeader>
@@ -828,28 +923,37 @@ const DashboardContent = () => {
             <CardDescription>Citas programadas para hoy</CardDescription>
           </CardHeader>
           <CardContent>
+            {/* Mostrar datos crudas de las citas antes de adaptar y filtrar */}
+            <div style={{marginBottom: 8}}>
+              <strong>Debug citas crudas hoy (sin adaptar):</strong>
+              <span style={{marginLeft:8, color:'#888'}}>Total: {rawAppointments.length}</span>
+              <pre style={{fontSize:10, background:'#f3f4f6', color:'#333', padding:8, borderRadius:4, maxHeight:200, overflow:'auto'}}>
+                {JSON.stringify(rawAppointments, null, 2)}
+              </pre>
+            </div>
+            {/* Mostrar datos adaptados y filtrados */}
+            <div style={{marginBottom: 8}}>
+              <strong>Debug citas adaptadas (upcomingAppointments):</strong>
+              <span style={{marginLeft:8, color:'#888'}}>Total: {upcomingAppointments.length}</span>
+              <pre style={{fontSize:10, background:'#f9f9f9', color:'#333', padding:8, borderRadius:4, maxHeight:200, overflow:'auto'}}>
+                {JSON.stringify(upcomingAppointments, null, 2)}
+              </pre>
+            </div>
+            {/* Render normal de próximas citas */}
             {upcomingAppointments.length > 0 ? (
-              <div className="space-y-3">
-                {upcomingAppointments.map((app, index) => (
-                  <div key={app.id} className={`flex items-center justify-between p-3 ${index % 2 === 0 ? 'bg-blue-50 border-blue-200' : 'bg-green-50 border-green-200'} rounded-lg border`}>
-                    <div className="flex items-center gap-3">
-                      <div className={`w-2 h-2 ${index % 2 === 0 ? 'bg-blue-500' : 'bg-green-500'} rounded-full`}></div>
-                      <div>
-                        <p className="font-medium">{app.client.name}</p>
-                        <p className="text-sm text-gray-600">{app.service.name}</p>
-                        {app.channel && (
-                          <span className="text-xs bg-gray-100 px-2 py-1 rounded-full">
-                            {app.channel}
-                          </span>
-                        )}
-                      </div>
+              <ul>
+                {upcomingAppointments.map((app, idx) => (
+                  <li key={`upcoming-${app.id ?? `idx-${idx}`}`}
+                      className="py-2 border-b last:border-b-0">
+                    <div className="flex flex-col">
+                      <span className="font-semibold">{app.service?.name} - {app.client?.name}</span>
+                      <span className="text-xs text-gray-500">{formatTime(app.time)} | {app.status}</span>
                     </div>
-                    <span className={`text-sm font-medium ${index % 2 === 0 ? 'text-blue-600' : 'text-green-600'}`}>{formatTime(app.time)}</span>
-                  </div>
+                  </li>
                 ))}
-              </div>
+              </ul>
             ) : (
-              <p className="text-sm text-gray-500">No hay citas programadas para hoy.</p>
+              <span className="text-gray-400">No hay citas próximas.</span>
             )}
           </CardContent>
         </Card>
@@ -1152,13 +1256,13 @@ const DashboardContent = () => {
           <CardContent>
             {popularServices.length > 0 ? (
               <div className="space-y-4">
-                {getUniqueCategories().map(category => {
+                {getUniqueCategories().map((category, idx) => {
                   const categoryServices = popularServices.filter(s => s.category === category);
                   const totalCount = categoryServices.reduce((sum, s) => sum + s.count, 0);
                   const maxCount = Math.max(...popularServices.map(s => s.count));
 
                   return (
-                    <div key={category} className="space-y-2">
+                    <div key={`cat-${category}-${idx}`} className="space-y-2">
                       <div className="flex justify-between items-center">
                         <span className="text-sm font-medium text-gray-700">{category}</span>
                         <span className="text-sm text-gray-500">{totalCount} citas</span>
@@ -1197,24 +1301,24 @@ const DashboardContent = () => {
           <CardContent>
             {upcomingAppointments.length > 0 ? (
               <div className="space-y-4">
-                {['scheduled', 'confirmed', 'in_progress', 'completed', 'cancelled'].map(status => {
+                {['Programada', 'Confirmada', 'En progreso', 'Completada', 'Cancelada'].map(status => {
                   const statusCount = upcomingAppointments.filter(app => app.status === status).length;
                   const percentage = upcomingAppointments.length > 0 ? (statusCount / upcomingAppointments.length) * 100 : 0;
 
                   const statusLabels = {
-                    'scheduled': 'Programadas',
-                    'confirmed': 'Confirmadas',
-                    'in_progress': 'En progreso',
-                    'completed': 'Completadas',
-                    'cancelled': 'Canceladas'
+                    'Programada': 'Programadas',
+                    'Confirmada': 'Confirmadas',
+                    'En progreso': 'En progreso',
+                    'Completada': 'Completadas',
+                    'Cancelada': 'Canceladas'
                   };
 
                   const statusColors = {
-                    'scheduled': 'bg-yellow-500',
-                    'confirmed': 'bg-blue-500',
-                    'in_progress': 'bg-orange-500',
-                    'completed': 'bg-green-500',
-                    'cancelled': 'bg-red-500'
+                    'Programada': 'bg-yellow-500',
+                    'Confirmada': 'bg-blue-500',
+                    'En progreso': 'bg-orange-500',
+                    'Completada': 'bg-green-500',
+                    'Cancelada': 'bg-red-500'
                   };
 
                   return statusCount > 0 ? (

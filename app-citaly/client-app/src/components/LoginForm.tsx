@@ -33,23 +33,25 @@ const LoginForm = () => {
     e.preventDefault();
     setError('');
 
-    console.log("?? Intentando iniciar sesión con:", email);
+    console.log("?? Intentando iniciar sesiï¿½n con:", email);
     try {
       const success = await login(email, password);
       console.log("?? Resultado del login:", success ? "Exitoso" : "Fallido");
 
       if (success) {
-        toast.success(`¡Bienvenido de nuevo!`);
-        console.log("?? Redirigiendo al usuario al dashboard");
+        toast.success(`Â¡Bienvenido de nuevo!`);
+        console.log("?? Login exitoso, redirigiendo al dashboard en 100ms");
 
-        // Forzar la redirección utilizando window.location para un reinicio completo
-        window.location.href = '/';
+        // Dar un pequeÃ±o tiempo para que el contexto se actualice antes de redirigir
+        setTimeout(() => {
+          navigate('/', { replace: true });
+        }, 100);
       } else {
-        setError('Credenciales incorrectas. Por favor verifica tu usuario y contraseña.');
+        setError('Credenciales incorrectas. Por favor verifica tu usuario y contraseï¿½a.');
       }
     } catch (err) {
-      console.error("Error durante el inicio de sesión:", err);
-      setError('Ha ocurrido un error al intentar iniciar sesión. Por favor intenta nuevamente.');
+      console.error("Error durante el inicio de sesiï¿½n:", err);
+      setError('Ha ocurrido un error al intentar iniciar sesiï¿½n. Por favor intenta nuevamente.');
     }
   };
 

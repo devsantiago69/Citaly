@@ -3,15 +3,18 @@ const router = express.Router();
 const citasController = require('../controllers/citas.controller');
 const { validateRequired, verifyToken } = require('../middlewares/auth');
 
-// Aplicar middleware de validación de company en todas las rutas
+// Aplicar middleware de validaciï¿½n de company en todas las rutas
 router.use(verifyToken);
+
+// GET estadÃ­sticas de citas
+router.get('/stats', citasController.getEstadisticasCitas);
 
 // GET todas las citas
 router.get('/', citasController.getCitas);
 
 // GET lista de citas (formato simplificado)
 router.get('/list', (req, res) => {
-  res.json([]); // Respuesta vacía temporal para evitar error de callback undefined
+  res.json([]); // Respuesta vacï¿½a temporal para evitar error de callback undefined
 });
 
 // GET eventos de calendario

@@ -8,6 +8,7 @@ interface Socket {
   on: (event: string, callback: (data: unknown) => void) => void;
   emit: (event: string, data?: unknown) => void;
   disconnect: () => void;
+  off?: (event: string, callback?: (data: unknown) => void) => void;
 }
 
 interface User {
@@ -59,6 +60,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       },
       disconnect: () => {
         console.log('Mock socket disconnected');
+      },
+      off: (event: string, callback?: (data: unknown) => void) => {
+        console.log(`Mock socket off: ${event}`);
       }
     };
 
@@ -96,13 +100,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               console.log("? Token verificado exitosamente", response.data);
 
               if (response.data && response.data.user) {
-                // Actualizamos con los datos más recientes del backend
-                setUser(response.data.user);
-                // Guardamos los datos actualizados en localStorage
-                localStorage.setItem('user', JSON.stringify(response.data.user));
+                // Solo actualizamos si los datos son diferentes para evitar re-renders innecesarios
+                const currentUserStr = JSON.stringify(userData);
+                const newUserStr = JSON.stringify(response.data.user);
+                
+                if (currentUserStr !== newUserStr) {
+                  setUser(response.data.user);
+                  localStorage.setItem('user', JSON.stringify(response.data.user));
+                }
 
-                // Inicializamos el socket solo después de la verificación exitosa
-                initializeSocket(response.data.user);
+                // Inicializamos el socket solo si no está ya inicializado
+                if (!socket) {
+                  initializeSocket(response.data.user);
+                }
               } else {
                 console.warn("? Respuesta del servidor no contiene datos de usuario");
               }
@@ -156,13 +166,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(null);
     }
 
-    console.log("?? Estado de autenticación finalizado, isLoading:", false, "user:", !!user);
+    console.log("?? Estado de autenticación finalizado, isLoading:", false);
     setIsLoading(false);
-  }, [user]);
+  }, []);
 
   useEffect(() => {
+    // Solo ejecutar la verificación una vez al montar el componente
     verifyAuth();
-  }, [verifyAuth]);
+  }, []);
 
   const login = async (email: string, password: string): Promise<boolean> => {
     setIsLoading(true);

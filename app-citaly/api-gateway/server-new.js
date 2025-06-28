@@ -5,7 +5,7 @@ const config = require('./config/env');
 const logger = require('./logger');
 const { requestLogger, errorHandler, verifyToken } = require('./middlewares/auth');
 const socketManager = require('./config/socket');
-const webhookManager = require('./config/webhooks');
+// const webhookManager = require('./config/webhooks');
 
 // Importar rutas principales
 const authRoutes = require('./routes/auth.routes');
@@ -20,11 +20,12 @@ const clientesRoutes = require('./routes/clientes.routes');
 const personalRoutes = require('./routes/personal.routes');
 const facturacionRoutes = require('./routes/facturacion.routes');
 const serviciosNewRoutes = require('./routes/servicios-new.routes');
+const appointmentsRoutes = require('./routes/appointments.routes');
 
 const app = express();
 const server = http.createServer(app);
 
-// Configuración de CORS avanzada para resolver problemas
+// ConfiguraciÃ³n de CORS avanzada para resolver problemas
 const corsOptions = {
   origin: function(origin, callback) {
     // Permitir cualquier origen en desarrollo
@@ -49,26 +50,26 @@ app.use((req, res, next) => {
   res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
   next();
 });
-// Registrar todos los orígenes de las solicitudes para depuración
+
+// Registrar todos los orÃ­genes de las solicitudes para depuraciÃ³n
 app.use((req, res, next) => {
   const origin = req.headers.origin || req.headers.referer || 'Desconocido';
-  logger.info(`Solicitud recibida desde origen: ${origin}, ruta: ${req.path}, método: ${req.method}`);
+  logger.info(`Solicitud recibida desde origen: ${origin}, ruta: ${req.path}, mÃ©todo: ${req.method}`);
   next();
 });
+
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
 // Middleware de logging
 app.use(requestLogger);
 
-// Rutas públicas (sin autenticación)
+// Rutas pÃºblicas (sin autenticaciÃ³n)
 app.use('/api/auth', authRoutes);
 
-// Middleware de autenticación (para todas las rutas siguientes)
-app.use(verifyToken);
-
-// Rutas protegidas
+// Rutas protegidas (cada una maneja su propia autenticaciÃ³n)
 app.use('/api/citas', citasRoutes);
+app.use('/api/appointments', citasRoutes); // Alias para compatibilidad
 
 // Test del sistema de logs
 logger.info('Initializing server', {
@@ -116,7 +117,7 @@ app.use('/api/clientes', clientesRoutes);
 // Rutas de personal (nueva estructura)
 app.use('/api/personal', personalRoutes);
 
-// Rutas de facturación y suscripciones
+// Rutas de facturaciÃ³n y suscripciones
 app.use('/api/facturacion', facturacionRoutes);
 
 // Rutas de citas (nueva estructura)
@@ -127,9 +128,6 @@ app.use('/api/servicios-new', serviciosNewRoutes);
 
 // ===== RUTAS EXISTENTES (COMPATIBILIDAD) =====
 
-// Rutas de citas/appointments (compatibilidad)
-app.use('/api/appointments', citasRoutes);
-
 // Rutas de usuarios (clientes, staff, admins)
 app.use('/api', usuariosRoutes);
 
@@ -138,6 +136,7 @@ app.use('/api', usuariosRoutes);
 // Rutas de servicios (estructura antigua)
 const serviciosRoutes = require('./routes/servicios.routes');
 app.use('/api/services', serviciosRoutes);
+app.use('/api/servicios', serviciosRoutes);
 
 // Rutas de especialidades
 const especialidadesRoutes = require('./routes/especialidades.routes');
@@ -154,8 +153,9 @@ app.use('/api', sistemaRoutes);
 // Rutas de reportes
 const reportesRoutes = require('./routes/reportes.routes');
 app.use('/api/reports', reportesRoutes);
+app.use('/api/reportes', reportesRoutes); // Alias en espaÃ±ol
 
-// Rutas de búsqueda y utilidades
+// Rutas de bÃºsqueda y utilidades
 const busquedaRoutes = require('./routes/busqueda.routes');
 app.use('/api', busquedaRoutes);
 
@@ -167,27 +167,8 @@ app.use('/api', realtimeRoutes);
 const staffSpecialtyRoutes = require('./routes/staffSpecialty.routes');
 app.use('/api/staff', staffSpecialtyRoutes);
 
-// ===== TODAS LAS RUTAS HAN SIDO MIGRADAS Y ACTUALIZADAS =====
-//
-// RUTAS DE LA NUEVA ESTRUCTURA (v3.0.0):
-// - /api/sucursales         - Gestión de sucursales (CRUD, asignaciones)
-// - /api/cajas             - Gestión de cajas y sesiones de caja (abrir, cerrar, movimientos)
-// - /api/clientes          - Gestión de clientes (nueva estructura con suscripciones)
-// - /api/personal          - Gestión de personal (staff con especialidades y roles)
-// - /api/facturacion       - Sistema de facturación y suscripciones completo
-// - /api/citas-new         - Sistema de citas con nueva estructura (sucursales, personal, etc.)
-// - /api/servicios-new     - Servicios con categorías y precios por sucursal
-//
-// RUTAS DE COMPATIBILIDAD (mantenidas para transición):
-// - /api/appointments      - Citas (estructura antigua)
-// - /api/users            - Usuarios (estructura antigua)
-// - /api/services         - Servicios (estructura antigua)
-// - /api/specialties      - Especialidades
-// - /api/reports          - Reportes y estadísticas
-// - /api/user-types       - Tipos de usuario
-// - /api/staff            - Especialidades del personal
-//
-// Rutas existentes mantenidas para compatibilidad: appointments, users, services, specialties, reports, etc.
+// Rutas de estadÃ­sticas de citas (nuevo endpoint)
+app.use('/api/appointments', appointmentsRoutes);
 
 // ===== MANEJO DE ERRORES =====
 
@@ -201,44 +182,32 @@ app.use('*', (req, res) => {
   });
 });
 
-// Middleware de manejo de errores (debe ir al final)
+// Middleware de manejo de errores global
 app.use(errorHandler);
 
-// ===== INICIALIZAR SOCKET.IO =====
-const io = socketManager.initialize(server);
+// ConfiguraciÃ³n de Socket.IO
+socketManager.initialize(server);
 
-// Hacer el socketManager y webhookManager disponibles globalmente
-app.set('socketManager', socketManager);
-app.set('webhookManager', webhookManager);
-
-// ===== INICIAR SERVIDOR =====
-
-const PORT = config.PORT;
-
+// Iniciar servidor
+const PORT = config.PORT || 3001;
 server.listen(PORT, () => {
-  logger.info(`?? Server running on port ${PORT}`, {
+  logger.info(`âœ… Citaly API Gateway iniciado en puerto ${PORT}`, {
     timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV || 'development',
-    timezone: config.TIMEZONE,
-    features: {
-      socketIO: true,
-      webhooks: webhookManager.getStatus().enabled,
-      jwt: true
-    }
+    port: PORT,
+    env: process.env.NODE_ENV || 'development',
+    timezone: config.TIMEZONE
   });
-
-  // Test webhook connection si está habilitado
-  if (webhookManager.getStatus().enabled) {
-    setTimeout(() => {
-      webhookManager.testConnection().then(result => {
-        if (result.success) {
-          logger.info('? Conexión de webhook a n8n exitosa');
-        } else {
-          logger.warn('?? No se pudo conectar con n8n webhook');
-        }
-      });
-    }, 2000);
-  }
 });
 
-module.exports = { app, server, io };
+// Manejo de errores no controlados
+process.on('uncaughtException', (error) => {
+  logger.error('Uncaught Exception:', error);
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  logger.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  process.exit(1);
+});
+
+module.exports = { app, server };
