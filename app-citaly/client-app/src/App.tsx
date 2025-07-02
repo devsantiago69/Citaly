@@ -12,7 +12,7 @@ import CategoryManagement from "components/CategoryManagement";
 import SpecialtiesPage from "pages/SpecialtiesPage";
 import ServiceManagement from "components/ServiceManagement";
 import AppointmentCalendar from "components/AppointmentCalendar";
-import AppointmentList from "components/AppointmentList";
+import AppointmentsDataTable from "components/AppointmentsDataTable";
 import UserManagement from "components/UserManagement";
 import StaffManagement from "components/StaffManagement";
 import ReportsPanel from "components/ReportsPanel";
@@ -43,7 +43,7 @@ const App = () => {
                 <Route path="/" element={<MainLayout />}>
                   <Route index element={<Index />} />
                   <Route path="calendar" element={<AppointmentCalendar />} />
-                  <Route path="appointments" element={<AppointmentList />} />
+                  <Route path="appointments" element={<AppointmentsDataTable />} />
                   <Route path="services" element={<ServiceManagement />} />
                   <Route path="categories" element={<CategoryManagement />} />
                   <Route path="specialties" element={<SpecialtiesPage />} />

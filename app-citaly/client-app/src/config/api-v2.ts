@@ -2,7 +2,7 @@ import axios from 'axios';
 
 const API_BASE_URL = 'http://localhost:3001/api';
 
-// Configuración central para el cliente axios
+// Configuraciï¿½n central para el cliente axios
 const axiosInstance = axios.create({
   baseURL: API_BASE_URL,
   headers: {
@@ -11,7 +11,7 @@ const axiosInstance = axios.create({
   timeout: 10000, // 10 segundos de timeout por defecto
 });
 
-// Interceptor para incluir el token de autenticación
+// Interceptor para incluir el token de autenticaciï¿½n
 axiosInstance.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
@@ -31,28 +31,28 @@ axiosInstance.interceptors.response.use(
   (error) => {
     // Manejo centralizado de errores
     if (error.response) {
-      // Error de respuesta del servidor (códigos 4xx, 5xx)
+      // Error de respuesta del servidor (cï¿½digos 4xx, 5xx)
       console.error('Error de servidor:', error.response.status, error.response.data);
 
-      // Manejo especial para errores de autenticación
+      // Manejo especial para errores de autenticaciï¿½n
       if (error.response.status === 401) {
-        // Redirigir a login o limpiar sesión
+        // Redirigir a login o limpiar sesiï¿½n
         localStorage.removeItem('token');
         window.location.href = '/login';
       }
     } else if (error.request) {
-      // No se recibió respuesta del servidor
-      console.error('No se recibió respuesta del servidor:', error.request);
+      // No se recibiï¿½ respuesta del servidor
+      console.error('No se recibiï¿½ respuesta del servidor:', error.request);
     } else {
-      // Error en la configuración de la solicitud
-      console.error('Error de configuración:', error.message);
+      // Error en la configuraciï¿½n de la solicitud
+      console.error('Error de configuraciï¿½n:', error.message);
     }
 
     return Promise.reject(error);
   }
 );
 
-// Interfaces para los parámetros
+// Interfaces para los parï¿½metros
 interface DateRangeParams {
   startDate?: string;
   endDate?: string;
@@ -110,7 +110,7 @@ interface Appointment {
   };
 }
 
-// Clase de servicio API que expone métodos para interactuar con el backend
+// Clase de servicio API que expone mï¿½todos para interactuar con el backend
 export const apiService = {
   // ===== Endpoints de Dashboard =====
   getDashboardStats: async (params?: DateRangeParams) => {
@@ -188,7 +188,7 @@ export const apiService = {
     }
   },
 
-  // Módulo de reportes
+  // Mï¿½dulo de reportes
   reports: {
     services: async (params?: DateRangeParams) => {
       return (await axiosInstance.get('/reportes/servicios', { params })).data;
@@ -204,7 +204,18 @@ export const apiService = {
     }
   },
 
-  // Añadir más métodos según sea necesario
+  // ===== Endpoints de Calendario =====
+  getCalendarSummary: async () => {
+    return await axiosInstance.get('/calendar/summary');
+  },
+  getCalendarDay: async (date: string) => {
+    return await axiosInstance.get('/calendar/day', { params: { date } });
+  },
+  getCalendarAll: async () => {
+    return await axiosInstance.get('/calendar/all');
+  },
+
+  // Aï¿½adir mï¿½s mï¿½todos segï¿½n sea necesario
 };
 
 export default apiService;

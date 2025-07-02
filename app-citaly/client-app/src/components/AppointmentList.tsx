@@ -45,7 +45,7 @@ interface Appointment {
   company_id: number;
   date: string;
   time: string;
-  status: 'scheduled' | 'completed' | 'cancelled' | 'confirmed' | 'pending' | 'in-progress';
+  status: 'completado' | 'programado' | 'cancelado' | 'confirmado' | 'pendiente' | 'en progreso';
   client: AppointmentClient;
   service: AppointmentService;
   staff: AppointmentStaff | null;
@@ -56,114 +56,67 @@ interface Appointment {
 interface AppointmentListProps {
   appointments?: Appointment[];
   isLoading?: boolean;
+  onAction?: () => void;
+  onFilteredChange?: (filtered: Appointment[]) => void; // Nuevo callback para notificar cambios en los filtros internos
 }
 
-const AppointmentList = ({ appointments: propAppointments, isLoading: propIsLoading }: AppointmentListProps = {}) => {
-  const [searchTerm, setSearchTerm] = useState("");
-  const [appointments, setAppointments] = useState<Appointment[]>(propAppointments || []);
-  const [isLoading, setIsLoading] = useState(propIsLoading || false);
-  const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
-  const [serviceFilter, setServiceFilter] = useState<string>("all");
+const AppointmentList = ({ appointments: propAppointments = [], isLoading: propIsLoading, onAction }: AppointmentListProps = {}) => {
+  // Eliminar todos los filtros internos y el estado de dateRange
+  const isLoading = propIsLoading || false;
 
-  // Fetch appointments if not provided as props
-  useEffect(() => {
-    if (!propAppointments) {
-      fetchAppointments();
-    }
-  }, [propAppointments]);
-
-  const fetchAppointments = async () => {
-    setIsLoading(true);
-    try {
-      const response = await fetch('/api/appointments');
-      if (response.ok) {
-        const data = await response.json();
-        setAppointments(data);
-      }
-    } catch (error) {
-      console.error('Error fetching appointments:', error);
-    } finally {
-      setIsLoading(false);
-    }
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('es-CL', {
+      style: 'currency',
+      currency: 'CLP'
+    }).format(amount);
   };
 
-  const uniqueServices = useMemo(() => {
-    const serviceNames = appointments.map(apt => apt.service.name);
-    return ["all", ...Array.from(new Set(serviceNames))];
-  }, [appointments]);
-
-  const filteredAppointments = useMemo(() => {
-    return appointments
-      .filter(apt => {
-        // Filtro por estado
-        if (statusFilter !== "all" && apt.status !== statusFilter) return false;
-        // Filtro por servicio
-        if (serviceFilter !== "all" && apt.service.name !== serviceFilter) return false;
-        // Filtro por rango de fechas
-        if (dateRange?.from && new Date(apt.date) < dateRange.from) return false;
-        if (dateRange?.to && new Date(apt.date) > dateRange.to) return false;
-        // Filtro por término de búsqueda
-        const searchLower = searchTerm.toLowerCase();
-        return (
-          apt.client?.name?.toLowerCase().includes(searchLower) ||
-          apt.service?.name?.toLowerCase().includes(searchLower) ||
-          apt.client?.phone?.includes(searchTerm)
-        );
-      });
-  }, [appointments, searchTerm, statusFilter, dateRange, serviceFilter]);
-
-  const stats = useMemo(() => {
-    const total = filteredAppointments.length;
-    const completed = filteredAppointments.filter(a => a.status === 'completed').length;
-    const pending = filteredAppointments.filter(a => ['pending', 'scheduled', 'confirmed'].includes(a.status)).length;
-    const cancelled = filteredAppointments.filter(a => a.status === 'cancelled').length;
-    const totalRevenue = filteredAppointments
-      .filter(a => a.status === 'completed')
-      .reduce((sum, apt) => sum + (Number(apt.service?.price) || 0), 0);
-
-    return { total, completed, pending, cancelled, totalRevenue };
-  }, [filteredAppointments]);
-
   const getStatusConfig = (status: string) => {
+    const statusNames: Record<string, string> = {
+      "confirmado": "Confirmada",
+      "pendiente": "Pendiente",
+      "en progreso": "En progreso",
+      "completado": "Completada",
+      "cancelado": "Cancelada",
+      "programado": "Programada"
+    };
     const configs = {
-      "confirmed": {
-        badge: <Badge className="bg-purple-100 text-purple-800 hover:bg-purple-100 capitalize">Confirmada</Badge>,
+      "confirmado": {
+        badge: <Badge className="bg-purple-100 text-purple-800 hover:bg-purple-100 capitalize">{statusNames["confirmado"]}</Badge>,
         bgColor: "bg-purple-50 border-purple-200"
       },
-      "pending": {
-        badge: <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100 capitalize">Pendiente</Badge>,
+      "pendiente": {
+        badge: <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100 capitalize">{statusNames["pendiente"]}</Badge>,
         bgColor: "bg-yellow-50 border-yellow-200"
       },
-      "in-progress": {
-        badge: <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100 capitalize">En curso</Badge>,
+      "en progreso": {
+        badge: <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100 capitalize">{statusNames["en progreso"]}</Badge>,
         bgColor: "bg-blue-50 border-blue-200"
       },
-      "completed": {
-        badge: <Badge className="bg-green-100 text-green-800 hover:bg-green-100 capitalize">Completada</Badge>,
+      "completado": {
+        badge: <Badge className="bg-green-100 text-green-800 hover:bg-green-100 capitalize">{statusNames["completado"]}</Badge>,
         bgColor: "bg-green-50 border-green-200"
       },
-      "cancelled": {
-        badge: <Badge className="bg-red-100 text-red-800 hover:bg-red-100 capitalize">Cancelada</Badge>,
+      "cancelado": {
+        badge: <Badge className="bg-red-100 text-red-800 hover:bg-red-100 capitalize">{statusNames["cancelado"]}</Badge>,
         bgColor: "bg-red-50 border-red-200"
       },
-      "scheduled": {
-        badge: <Badge className="bg-gray-100 text-gray-800 hover:bg-gray-100 capitalize">Programada</Badge>,
+      "programado": {
+        badge: <Badge className="bg-gray-100 text-gray-800 hover:bg-gray-100 capitalize">{statusNames["programado"]}</Badge>,
         bgColor: "bg-gray-50 border-gray-200"
       }
     };
-    
     return configs[status as keyof typeof configs] || {
-      badge: <Badge variant="secondary" className="capitalize">{status}</Badge>,
+      badge: <Badge variant="secondary" className="capitalize">{status.charAt(0).toUpperCase() + status.slice(1)}</Badge>,
       bgColor: "bg-gray-50 border-gray-200"
     };
   };
 
   const handleAction = async (action: 'confirm' | 'complete' | 'cancel', appointmentId: number) => {
     const statusMap = {
-      confirm: 'confirmed',
-      complete: 'completed',
-      cancel: 'cancelled',
+      confirm: 'Confirmada',
+      complete: 'Completada',
+      cancel: 'Cancelada',
     };
     const newStatus = statusMap[action];
 
@@ -173,22 +126,17 @@ const AppointmentList = ({ appointments: propAppointments, isLoading: propIsLoad
     }
 
     try {
-      const response = await fetch(`/api/appointments/${appointmentId}/status`, {
-        method: 'PATCH',
+      const response = await fetch(`/api/citas/${appointmentId}`, {
+        method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ status: newStatus }),
+        body: JSON.stringify({ estado: newStatus }),
       });
 
       if (response.ok) {
-        const updatedAppointment = await response.json();
-        setAppointments(prevAppointments =>
-          prevAppointments.map(apt =>
-            apt.id === appointmentId ? { ...apt, status: updatedAppointment.status } : apt
-          )
-        );
         toast.success(`Cita actualizada a "${newStatus}".`);
+        if (onAction) onAction(); // Recargar desde el padre
       } else {
         const errorData = await response.json().catch(() => ({ message: 'No se pudo procesar la respuesta del servidor.' }));
         toast.error(`Error al actualizar la cita: ${errorData.message || 'Error desconocido'}`);
@@ -197,13 +145,6 @@ const AppointmentList = ({ appointments: propAppointments, isLoading: propIsLoad
       console.error('Error updating appointment status:', error);
       toast.error('No se pudo conectar con el servidor para actualizar la cita.');
     }
-  };
-  
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('es-CL', {
-      style: 'currency',
-      currency: 'CLP'
-    }).format(amount);
   };
 
   if (isLoading) {
@@ -217,115 +158,9 @@ const AppointmentList = ({ appointments: propAppointments, isLoading: propIsLoad
 
   return (
     <div className="space-y-6">
-      {/* Quick Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Total Citas</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.total}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Completadas</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">{stats.completed}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Pendientes</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-yellow-600">{stats.pending}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Canceladas</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">{stats.cancelled}</div>
-          </CardContent>
-        </Card>
-        <Card className="col-span-2 md:col-span-1">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Ingresos (Completadas)</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(stats.totalRevenue)}</div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Filters and Search */}
-      <Card>
-        <CardContent className="p-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="relative lg:col-span-2">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-              <Input
-                placeholder="Buscar por cliente, servicio o teléfono..."
-                className="pl-10"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-            
-            {/* Status Filter */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="w-full justify-between">
-                  <span>Estado: {statusFilter === 'all' ? 'Todos' : statusFilter}</span>
-                  <ChevronDown className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-full">
-                {['all', 'scheduled', 'completed', 'cancelled', 'confirmed', 'pending', 'in-progress'].map(status => (
-                  <DropdownMenuItem key={status} onSelect={() => setStatusFilter(status)}>
-                    {status.charAt(0).toUpperCase() + status.slice(1)}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-
-            {/* Date Range Filter */}
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="outline" className="w-full justify-start text-left font-normal">
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {dateRange?.from ? (
-                    dateRange.to ? (
-                      <>{format(dateRange.from, "LLL dd, y")} - {format(dateRange.to, "LLL dd, y")}</>
-                    ) : (
-                      format(dateRange.from, "LLL dd, y")
-                    )
-                  ) : (
-                    <span>Seleccionar fecha</span>
-                  )}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  mode="range"
-                  selected={dateRange}
-                  onSelect={setDateRange}
-                  locale={es}
-                  initialFocus
-                />
-              </PopoverContent>
-            </Popover>
-
-          </div>
-        </CardContent>
-      </Card>
-
-      {filteredAppointments.length > 0 ? (
+      {propAppointments.length > 0 ? (
         <div className="space-y-4">
-          {filteredAppointments.map((apt) => {
+          {propAppointments.map((apt) => {
             const statusConfig = getStatusConfig(apt.status);
             return (
               <Card key={apt.id} className={`transition-all hover:shadow-md ${statusConfig.bgColor}`}>

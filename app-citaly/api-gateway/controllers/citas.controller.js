@@ -1,7 +1,101 @@
+// GET todas las citas con detalles completos para DataTable
+const getCitasDataTable = async (req, res) => {
+  try {
+    console.log('req.user en getCitasDataTable:', req.user);
+    const { company_id } = req.user;
+    // Puedes agregar paginación y filtros si lo deseas
+    const query = `
+      SELECT
+        c.id,
+        c.fecha,
+        c.hora,
+        c.estado,
+        c.notas,
+        c.canal,
+        c.origen,
+        c.cliente_id,
+        c.personal_id,
+        c.servicio_id,
+        c.sucursal_id,
+        cl.nombres as cliente_nombres,
+        cl.apellidos as cliente_apellidos,
+        cl.telefono as cliente_telefono,
+        cl.correo_electronico as cliente_email,
+        CONCAT(cl.nombres, ' ', cl.apellidos) as cliente_nombre_completo,
+        s.nombre as servicio_nombre,
+        s.duracion as servicio_duracion,
+        s.precio as servicio_precio_base,
+        ss.precio as servicio_precio,
+        cs.nombre as categoria_nombre,
+        p.id as personal_id,
+        u.nombre as personal_nombre,
+        u.telefono as personal_telefono,
+        suc.nombre as sucursal_nombre,
+        suc.direccion as sucursal_direccion
+      FROM citas c
+      LEFT JOIN clientes cl ON c.cliente_id = cl.id
+      LEFT JOIN servicios s ON c.servicio_id = s.id
+      LEFT JOIN servicios_sucursal ss ON c.servicio_id = ss.servicio_id AND c.sucursal_id = ss.sucursal_id
+      LEFT JOIN categorias_servicio cs ON s.categoria_id = cs.id
+      LEFT JOIN personal p ON c.personal_id = p.id
+      LEFT JOIN usuarios u ON p.usuario_id = u.id
+      LEFT JOIN sucursales suc ON c.sucursal_id = suc.id
+      WHERE c.empresa_id = ?
+      ORDER BY c.fecha DESC, c.hora DESC
+    `;
+    const [results] = await db.execute(query, [company_id]);
+    // Formatear los resultados para el frontend
+    const formattedResults = results.map(cita => ({
+      id: cita.id,
+      fecha: cita.fecha,
+      hora: cita.hora,
+      estado: cita.estado,
+      notas: cita.notas,
+      canal: cita.canal,
+      origen: cita.origen,
+      estado_pago: cita.estado_pago || null,
+      medio_pago: cita.medio_pago || null,
+      cliente: {
+        id: cita.cliente_id,
+        nombres: cita.cliente_nombres,
+        apellidos: cita.cliente_apellidos,
+        nombre_completo: cita.cliente_nombre_completo,
+        telefono: cita.cliente_telefono,
+        email: cita.cliente_email
+      },
+      servicio: {
+        id: cita.servicio_id,
+        nombre: cita.servicio_nombre,
+        duracion: cita.servicio_duracion,
+        precio_base: cita.servicio_precio_base,
+        precio: cita.servicio_precio,
+        categoria: cita.categoria_nombre
+      },
+      personal: cita.personal_id ? {
+        id: cita.personal_id,
+        nombre: cita.personal_nombre,
+        telefono: cita.personal_telefono
+      } : null,
+      sucursal: {
+        id: cita.sucursal_id,
+        nombre: cita.sucursal_nombre,
+        direccion: cita.sucursal_direccion
+      }
+    }));
+    res.json({ success: true, data: formattedResults });
+  } catch (error) {
+    logger.error('Error in getCitasDataTable:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error interno del servidor',
+      error: error.message
+    });
+  }
+};
 const db = require('../config/db');
 const logger = require('../logger');
 
-// Funci�n para obtener socketManager y webhookManager
+// Función para obtener socketManager y webhookManager
 const getManagers = (req) => {
   const socketManager = req.app.get('socketManager');
   const webhookManager = req.app.get('webhookManager');
@@ -20,21 +114,9 @@ const getCitas = async (req, res) => {
       sucursal_id,
       page = 1,
       limit = 10,
-      status, // Agregamos par�metro status que viene del frontend
-      date    // Agregamos par�metro date que viene del frontend
+      status, // Agregamos parámetro status que viene del frontend
+      date    // Agregamos parámetro date que viene del frontend
     } = req.query;
-
-    logger.info('GET /api/appointments - Request received', {
-      origen: req.get('origin'),
-      company_id,
-      fecha,
-      fecha_inicio,
-      fecha_fin,
-      estado,
-      sucursal_id,
-      status,
-      date
-    });
 
     const offset = (page - 1) * parseInt(limit);
 
@@ -129,12 +211,10 @@ const getCitas = async (req, res) => {
       LIMIT ? OFFSET ?
     `;
 
-    logger.info('[CITAS] getCitas - Query:', { query });
     // Filtrar cualquier valor undefined o null de los queryParams
     const filteredQueryParams = queryParams.filter(param => param !== undefined && param !== null);
 
     const [results] = await db.execute(query, [...filteredQueryParams, parseInt(limit), offset]);
-    logger.info('[CITAS] getCitas - Result:', results);
 
     // Obtener total de registros
     const countQuery = `
@@ -653,6 +733,247 @@ const getAppointmentsFilters = async (req, res) => {
   }
 };
 
+// GET citas para el calendario mensual (solo empresa y rango de mes, sin filtros avanzados)
+const getCitasCalendar = async (req, res) => {
+  try {
+    console.log('DEBUG: Entrando a getCitasCalendar', {
+      fecha_inicio: req.query.fecha_inicio,
+      fecha_fin: req.query.fecha_fin,
+      user: req.user
+    });
+
+    const { company_id } = req.user;
+    const { fecha_inicio, fecha_fin } = req.query;
+
+    logger.info('GET /api/appointments/calendar/month - Request received', {
+      company_id,
+      fecha_inicio,
+      fecha_fin,
+      user: req.user,
+      headers: req.headers,
+      ip: req.ip
+    });
+
+    if (!fecha_inicio || !fecha_fin) {
+      logger.warn('[CITAS] getCitasCalendar - Faltan parámetros de fecha', { fecha_inicio, fecha_fin });
+      return res.status(400).json({
+        success: false,
+        message: 'Debe enviar fecha_inicio y fecha_fin para el calendario.'
+      });
+    }
+
+    let whereClause = 'WHERE c.empresa_id = ? AND c.fecha BETWEEN ? AND ?';
+    const queryParams = [company_id, fecha_inicio, fecha_fin];
+
+    const query = `
+      SELECT
+        c.id,
+        c.fecha,
+        c.hora,
+        c.estado,
+        c.notas,
+        c.canal,
+        c.origen,
+        c.cliente_id,
+        c.personal_id,
+        c.servicio_id,
+        c.sucursal_id,
+        cl.nombres as cliente_nombres,
+        cl.apellidos as cliente_apellidos,
+        cl.telefono as cliente_telefono,
+        cl.correo_electronico as cliente_email,
+        CONCAT(cl.nombres, ' ', cl.apellidos) as cliente_nombre_completo,
+        s.nombre as servicio_nombre,
+        s.duracion as servicio_duracion,
+        s.precio as servicio_precio_base,
+        ss.precio as servicio_precio,
+        cs.nombre as categoria_nombre,
+        p.id as personal_id,
+        u.nombre as personal_nombre,
+        u.telefono as personal_telefono,
+        suc.nombre as sucursal_nombre,
+        suc.direccion as sucursal_direccion
+      FROM citas c
+      LEFT JOIN clientes cl ON c.cliente_id = cl.id
+      LEFT JOIN servicios s ON c.servicio_id = s.id
+      LEFT JOIN servicios_sucursal ss ON c.servicio_id = ss.servicio_id AND c.sucursal_id = ss.sucursal_id
+      LEFT JOIN categorias_servicio cs ON s.categoria_id = cs.id
+      LEFT JOIN personal p ON c.personal_id = p.id
+      LEFT JOIN usuarios u ON p.usuario_id = u.id
+      LEFT JOIN sucursales suc ON c.sucursal_id = suc.id
+      ${whereClause}
+      ORDER BY c.fecha ASC, c.hora ASC
+    `;
+
+    logger.info('[CITAS] getCitasCalendar - Query:', { query, queryParams });
+    const [results] = await db.execute(query, queryParams);
+    logger.info('[CITAS] getCitasCalendar - Result count:', { count: results.length });
+    logger.info('[CITAS] getCitasCalendar - Result sample:', results.slice(0, 10)); // Muestra las primeras 10 citas
+    // Mostrar todas las fechas únicas encontradas
+    const fechasUnicas = [...new Set(results.map(r => r.fecha))];
+    logger.info('[CITAS] getCitasCalendar - Fechas únicas encontradas:', fechasUnicas);
+
+    // Formatear los resultados igual que en getCitas
+    const formattedResults = results.map(cita => ({
+      id: cita.id,
+      fecha: cita.fecha,
+      hora: cita.hora,
+      estado: cita.estado,
+      notas: cita.notas,
+      canal: cita.canal,
+      origen: cita.origen,
+      cliente: {
+        id: cita.cliente_id,
+        nombres: cita.cliente_nombres,
+        apellidos: cita.cliente_apellidos,
+        nombre_completo: cita.cliente_nombre_completo,
+        telefono: cita.cliente_telefono,
+        email: cita.cliente_email
+      },
+      servicio: {
+        id: cita.servicio_id,
+        nombre: cita.servicio_nombre,
+        duracion: cita.servicio_duracion,
+        precio_base: cita.servicio_precio_base,
+        precio: cita.servicio_precio,
+        categoria: cita.categoria_nombre
+      },
+      personal: cita.personal_id ? {
+        id: cita.personal_id,
+        nombre: cita.personal_nombre,
+        telefono: cita.personal_telefono
+      } : null,
+      sucursal: {
+        id: cita.sucursal_id,
+        nombre: cita.sucursal_nombre,
+        direccion: cita.sucursal_direccion
+      }
+    }));
+
+    res.json({
+      success: true,
+      data: formattedResults
+    });
+  } catch (error) {
+    logger.error('Error in getCitasCalendar:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error interno del servidor',
+      error: error.message
+    });
+  }
+};
+
+// --- NUEVAS FUNCIONES DE ACCIONES DE CITA ---
+// Cancelar cita (POST /api/citas/:id/cancelar)
+const cancelarCita = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const actualizado_por = req.user?.id || 1;
+    // Verificar que la cita existe
+    const [existingCita] = await db.execute('SELECT * FROM citas WHERE id = ?', [id]);
+    if (existingCita.length === 0) {
+      return res.status(404).json({ success: false, message: 'Cita no encontrada' });
+    }
+    await db.execute('UPDATE citas SET estado = "Cancelada", actualizado_por = ? WHERE id = ?', [actualizado_por, id]);
+    // Notificar via WebSocket
+    const { socketManager } = getManagers(req);
+    if (socketManager) {
+      socketManager.notifyAppointmentCancellation({ id, estado: 'Cancelada' });
+    }
+    res.json({ success: true, message: 'Cita cancelada exitosamente' });
+  } catch (error) {
+    logger.error('Error cancelando cita:', error);
+    res.status(500).json({ success: false, message: 'Error interno del servidor', error: error.message });
+  }
+};
+
+// Reagendar cita (POST /api/citas/:id/reagendar)
+const reagendarCita = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { fecha, hora } = req.body;
+    const actualizado_por = req.user?.id || 1;
+    if (!fecha || !hora) {
+      return res.status(400).json({ success: false, message: 'Debe enviar fecha y hora nuevas' });
+    }
+    // Verificar que la cita existe
+    const [existingCita] = await db.execute('SELECT * FROM citas WHERE id = ?', [id]);
+    if (existingCita.length === 0) {
+      return res.status(404).json({ success: false, message: 'Cita no encontrada' });
+    }
+    // Verificar disponibilidad de horario
+    const [conflicto] = await db.execute(
+      'SELECT id FROM citas WHERE fecha = ? AND hora = ? AND id != ? AND estado NOT IN ("Cancelada")',
+      [fecha, hora, id]
+    );
+    if (conflicto.length > 0) {
+      return res.status(400).json({ success: false, message: 'Ya existe una cita programada en este horario' });
+    }
+    await db.execute('UPDATE citas SET fecha = ?, hora = ?, actualizado_por = ? WHERE id = ?', [fecha, hora, actualizado_por, id]);
+    // Notificar via WebSocket
+    const { socketManager } = getManagers(req);
+    if (socketManager) {
+      socketManager.notifyAppointmentUpdate({ id, fecha, hora });
+    }
+    res.json({ success: true, message: 'Cita reagendada exitosamente' });
+  } catch (error) {
+    logger.error('Error reagendando cita:', error);
+    res.status(500).json({ success: false, message: 'Error interno del servidor', error: error.message });
+  }
+};
+
+// Asignar cita a otra sucursal (POST /api/citas/:id/asignar-sucursal)
+const asignarSucursalCita = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { sucursal_id } = req.body;
+    const actualizado_por = req.user?.id || 1;
+    if (!sucursal_id) {
+      return res.status(400).json({ success: false, message: 'Debe enviar el ID de la nueva sucursal' });
+    }
+    // Verificar que la cita existe
+    const [existingCita] = await db.execute('SELECT * FROM citas WHERE id = ?', [id]);
+    if (existingCita.length === 0) {
+      return res.status(404).json({ success: false, message: 'Cita no encontrada' });
+    }
+    await db.execute('UPDATE citas SET sucursal_id = ?, actualizado_por = ? WHERE id = ?', [sucursal_id, actualizado_por, id]);
+    // Notificar via WebSocket
+    const { socketManager } = getManagers(req);
+    if (socketManager) {
+      socketManager.notifyAppointmentUpdate({ id, sucursal_id });
+    }
+    res.json({ success: true, message: 'Sucursal de la cita actualizada exitosamente' });
+  } catch (error) {
+    logger.error('Error asignando sucursal a cita:', error);
+    res.status(500).json({ success: false, message: 'Error interno del servidor', error: error.message });
+  }
+};
+
+// Pagar cita (POST /api/citas/:id/pagar)
+const pagarCita = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { estado_pago = 'Pagado', medio_pago = 'Efectivo' } = req.body;
+    const actualizado_por = req.user?.id || 1;
+    // Verificar que la cita existe
+    const [existingCita] = await db.execute('SELECT * FROM citas WHERE id = ?', [id]);
+    if (existingCita.length === 0) {
+      return res.status(404).json({ success: false, message: 'Cita no encontrada' });
+    }
+    await db.execute('UPDATE citas SET estado_pago = ?, medio_pago = ?, actualizado_por = ? WHERE id = ?', [estado_pago, medio_pago, actualizado_por, id]);
+    // Notificar via WebSocket
+    const { socketManager } = getManagers(req);
+    if (socketManager) {
+      socketManager.notifyAppointmentUpdate({ id, estado_pago, medio_pago });
+    }
+    res.json({ success: true, message: 'Cita marcada como pagada' });
+  } catch (error) {
+    logger.error('Error pagando cita:', error);
+    res.status(500).json({ success: false, message: 'Error interno del servidor', error: error.message });
+  }
+};
+
 module.exports = {
   getCitas,
   getCita,
@@ -662,5 +983,11 @@ module.exports = {
   getEstadisticasCitas,
   getCitasPorSucursal,
   getAppointmentsCalendar,
-  getAppointmentsFilters
+  getAppointmentsFilters,
+  getCitasCalendar,
+  getCitasDataTable,
+  cancelarCita,
+  reagendarCita,
+  asignarSucursalCita,
+  pagarCita
 };

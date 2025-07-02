@@ -22,32 +22,56 @@ const facturacionRoutes = require('./routes/facturacion.routes');
 const serviciosNewRoutes = require('./routes/servicios-new.routes');
 const appointmentsRoutes = require('./routes/appointments.routes');
 
+
+
+const calendarioRoutes = require('./routes/calendario.routes');
+
 const app = express();
 const server = http.createServer(app);
 
-// Configuración de CORS avanzada para resolver problemas
-const corsOptions = {
-  origin: function(origin, callback) {
-    // Permitir cualquier origen en desarrollo
-    callback(null, true);
-  },
+// Configuración de CORS universal y correcta
+app.use(cors({
+  origin: '*',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'X-Requested-With'],
-  credentials: false, // Cambiado a false para evitar problemas con credenciales en diferentes dominios
-  optionsSuccessStatus: 200 // Algunos navegadores legacy requieren 200 en lugar de 204
-};
+  credentials: false,
+  optionsSuccessStatus: 200
+}));
 
-// Middlewares globales
-app.use(cors(corsOptions));
-
-// Log de todas las solicitudes para debugging
+// Middleware para responder preflight y asegurar cabeceras CORS en todas las respuestas
 app.use((req, res, next) => {
-  const origin = req.headers.origin || req.headers.referer || 'Desconocido';
-  logger.info(`[CORS] Solicitud ${req.method} ${req.path} desde ${origin}`);
-
-  // Agregar encabezados CORS a todas las respuestas manualmente
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+  next();
+});
+
+// ...existing code...
+
+// Rutas de calendario (nuevo sistema) - DEBE IR DESPUÉS DE LOS MIDDLEWARES DE CORS
+app.use('/api/calendario', calendarioRoutes);
+
+
+// Configuración de CORS universal y correcta
+app.use(cors({
+  origin: '*',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'X-Requested-With'],
+  credentials: false,
+  optionsSuccessStatus: 200
+}));
+
+// Middleware para responder preflight y asegurar cabeceras CORS en todas las respuestas
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
   next();
 });
 

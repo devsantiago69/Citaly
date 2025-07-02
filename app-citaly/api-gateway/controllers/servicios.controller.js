@@ -19,7 +19,7 @@ const getServicios = async (req, res) => {
     `;
     logger.info(`[SERVICIOS] getServicios - Query:`, { query });
     const [rows] = await db.execute(query, [empresa_id]);
-    logger.info('[SERVICIOS] getServicios - Result:', rows);
+    // logger.info('[SERVICIOS] getServicios - Result:', rows); // Silenced noisy log
     res.json(rows);
   } catch (error) {
     logger.error('[SERVICIOS] Error en getServicios:', error);

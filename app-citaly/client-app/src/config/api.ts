@@ -12,18 +12,26 @@ function buildQueryString(params?: Record<string, any>) {
     );
 }
 
+function getAuthHeaders(): Record<string, string> {
+    const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+    };
+    const token = localStorage.getItem('token');
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+    }
+    return headers;
+}
+
 export const api = {
     get: async (endpoint: string, options?: { params?: Record<string, any> }) => {
         let url = `${API_BASE_URL}${endpoint}`;
-        if (options && options.params) {
+        if (options?.params) {
             url += buildQueryString(options.params);
         }
-        // Agregar header Authorization si hay token
-        const headers: Record<string, string> = {};
-        const token = localStorage.getItem('token');
-        if (token) {
-            headers['Authorization'] = `Bearer ${token}`;
-        }
+        const headers = getAuthHeaders();
+        delete headers['Content-Type']; // GET no necesita Content-Type
+        
         const response = await fetch(url, { headers });
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
@@ -34,9 +42,7 @@ export const api = {
     post: async (endpoint: string, data: any) => {
         const response = await fetch(`${API_BASE_URL}${endpoint}`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
+            headers: getAuthHeaders(),
             body: JSON.stringify(data),
         });
         if (!response.ok) {
@@ -48,9 +54,7 @@ export const api = {
     put: async (endpoint: string, data: any) => {
         const response = await fetch(`${API_BASE_URL}${endpoint}`, {
             method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-            },
+            headers: getAuthHeaders(),
             body: JSON.stringify(data),
         });
         if (!response.ok) {
@@ -60,8 +64,12 @@ export const api = {
     },
 
     delete: async (endpoint: string) => {
+        const headers = getAuthHeaders();
+        delete headers['Content-Type']; // DELETE no necesita Content-Type
+        
         const response = await fetch(`${API_BASE_URL}${endpoint}`, {
             method: 'DELETE',
+            headers,
         });
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);

@@ -1,24 +1,10 @@
 import { useEffect, useState } from "react";
-import { Calendar, Clock, Users, DollarSign, TrendingUp, AlertTriangle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { api } from "../config/api";
-
-interface Stats {
-  todayAppointments: { value: number; change: string };
-  pendingAppointments: { value: number; change: string };
-  completedAppointments: { value: number; change: string };
-  todayRevenue: { value: string; change: string };
-  monthlyRevenue: { value: string; change: string };
-  cancelledAppointments: { value: number; change: string };
-}
-
-interface AppointmentStatusCount {
-  status: string;
-  count: number;
-}
+import { Calendar, Clock, Users, AlertTriangle, CalendarDays, TrendingUp, BadgeCheck, CalendarClock, CheckCircle, XCircle, HelpCircle } from "lucide-react";
 
 const StatsCards = () => {
-  const [stats, setStats] = useState<Stats | null>(null);
+  const [stats, setStats] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -26,89 +12,19 @@ const StatsCards = () => {
     const fetchStats = async () => {
       try {
         setLoading(true);
-        // Get today's date and first day of month
-        const today = new Date().toISOString().split('T')[0];
-        const firstDayOfMonth = new Date();
-        firstDayOfMonth.setDate(1);
-        const monthStart = firstDayOfMonth.toISOString().split('T')[0];
-        if (!monthStart || !today) {
-          setError('Fechas inválidas para stats');
-          setLoading(false);
-          return;
+        // Llamar al endpoint SIN filtros de fecha
+        const response = await api.get('/api/appointments/stats');
+        console.log('[StatsCards] Response:', response);
+        if (response && response.success && response.data) {
+          setStats(response.data);
+        } else {
+          setStats(null);
+          setError('No se pudo obtener la información de estadísticas');
         }
-        // Llamar al nuevo endpoint
-        const response = await api.get('/api/appointments/stats', {
-          params: {
-            start_date: monthStart,
-            end_date: today
-          }
-        });
-        // Procesar los datos recibidos
-        const statsData: AppointmentStatusCount[] = Array.isArray(response) ? response : [];
-        // Mapear los estados a variables
-        const getCount = (status: string) => {
-          const found = statsData.find(s => (s.status || '').toLowerCase() === status);
-          return found ? Number(found.count) : 0;
-        };
-        // Asignar valores
-        const completed = getCount('completada');
-        const pending = getCount('pendiente') + getCount('programada') + getCount('in_progress') + getCount('scheduled') + getCount('confirmed');
-        const cancelled = getCount('cancelada') + getCount('cancelled');
-        const total = completed + pending + cancelled;
-        // Simular ingresos (si no hay campo revenue)
-        const todayRevenue = 0;
-        const monthlyRevenue = 0;
-        // Cambios respecto a promedio diario
-        const daysInMonth = 1;
-        const dailyAverage = {
-          appointments: total / daysInMonth,
-          completed: completed / daysInMonth,
-          pending: pending / daysInMonth,
-          cancelled: cancelled / daysInMonth,
-          revenue: 0
-        };
-        const calculateChange = (current: number, average: number) => {
-          if (average === 0) return "0%";
-          const change = ((current - average) / average) * 100;
-          return `${change >= 0 ? '+' : ''}${change.toFixed(1)}%`;
-        };
-        setStats({
-          todayAppointments: {
-            value: total,
-            change: calculateChange(total, dailyAverage.appointments)
-          },
-          pendingAppointments: {
-            value: pending,
-            change: calculateChange(pending, dailyAverage.pending)
-          },
-          completedAppointments: {
-            value: completed,
-            change: calculateChange(completed, dailyAverage.completed)
-          },
-          todayRevenue: {
-            value: `$${todayRevenue.toLocaleString()}`,
-            change: calculateChange(todayRevenue, dailyAverage.revenue)
-          },
-          monthlyRevenue: {
-            value: `$${monthlyRevenue.toLocaleString()}`,
-            change: `${((completed / (total || 1)) * 100).toFixed(1)}% completadas`
-          },
-          cancelledAppointments: {
-            value: cancelled,
-            change: calculateChange(cancelled, dailyAverage.cancelled)
-          }
-        });
       } catch (err) {
         console.error('Error fetching stats:', err);
-        setError(null); // No mostrar error visual, solo dejar los valores en cero
-        setStats({
-          todayAppointments: { value: 0, change: '0%' },
-          pendingAppointments: { value: 0, change: '0%' },
-          completedAppointments: { value: 0, change: '0%' },
-          todayRevenue: { value: '$0', change: '0%' },
-          monthlyRevenue: { value: '$0', change: '0%' },
-          cancelledAppointments: { value: 0, change: '0%' }
-        });
+        setError('Error al obtener estadísticas');
+        setStats(null);
       } finally {
         setLoading(false);
       }
@@ -116,57 +32,33 @@ const StatsCards = () => {
     fetchStats();
   }, []);
 
-  const statsConfig = [
-    {
-      title: "Citas Hoy",
-      getValue: (data: Stats) => String(data.todayAppointments.value),
-      getChange: (data: Stats) => data.todayAppointments.change,
-      icon: Calendar,
-      color: "text-blue-600",
-      bgColor: "bg-blue-50"
-    },
-    {
-      title: "Citas Pendientes",
-      getValue: (data: Stats) => String(data.pendingAppointments.value),
-      getChange: (data: Stats) => data.pendingAppointments.change,
-      icon: Clock,
-      color: "text-orange-600",
-      bgColor: "bg-orange-50"
-    },
-    {
-      title: "Clientes Atendidos",
-      getValue: (data: Stats) => String(data.completedAppointments.value),
-      getChange: (data: Stats) => data.completedAppointments.change,
-      icon: Users,
-      color: "text-green-600",
-      bgColor: "bg-green-50"
-    },
-    {
-      title: "Ingresos del Día",
-      getValue: (data: Stats) => data.todayRevenue.value,
-      getChange: (data: Stats) => data.todayRevenue.change,
-      icon: DollarSign,
-      color: "text-purple-600",
-      bgColor: "bg-purple-50"
-    },
-    {
-      title: "Ingresos del Mes",
-      getValue: (data: Stats) => data.monthlyRevenue.value,
-      getChange: (data: Stats) => data.monthlyRevenue.change,
-      icon: TrendingUp,
-      color: "text-emerald-600",
-      bgColor: "bg-emerald-50"
-    },
-    {
-      title: "Citas Canceladas",
-      getValue: (data: Stats) => String(data.cancelledAppointments.value),
-      getChange: (data: Stats) => data.cancelledAppointments.change,
-      icon: AlertTriangle,
-      color: "text-red-600",
-      bgColor: "bg-red-50"
-    }
+  // Configuración de iconos y colores para campos comunes
+  const iconMap: Record<string, { icon: React.ReactNode, bg: string }> = {
+    hoy: { icon: <CalendarDays className="h-5 w-5 text-purple-600" />, bg: "bg-purple-50" },
+    programadas: { icon: <Clock className="h-5 w-5 text-yellow-600" />, bg: "bg-yellow-50" },
+    completadas: { icon: <CheckCircle className="h-5 w-5 text-green-600" />, bg: "bg-green-50" },
+    canceladas: { icon: <XCircle className="h-5 w-5 text-red-600" />, bg: "bg-red-50" },
+    confirmadas: { icon: <BadgeCheck className="h-5 w-5 text-blue-600" />, bg: "bg-blue-50" },
+    total_citas: { icon: <Calendar className="h-5 w-5 text-blue-600" />, bg: "bg-blue-50" },
+    este_mes: { icon: <TrendingUp className="h-5 w-5 text-emerald-600" />, bg: "bg-emerald-50" },
+    esta_semana: { icon: <CalendarClock className="h-5 w-5 text-orange-600" />, bg: "bg-orange-50" },
+    usuarios: { icon: <Users className="h-5 w-5 text-green-600" />, bg: "bg-green-50" },
+    otros: { icon: <HelpCircle className="h-5 w-5 text-gray-400" />, bg: "bg-gray-50" },
+  };
+
+  // Lista de campos a mostrar primero (orden y nombres amigables)
+  const fieldOrder: { key: string, label: string }[] = [
+    { key: 'hoy', label: 'Citas Hoy' },
+    { key: 'programadas', label: 'Citas Programadas' },
+    { key: 'completadas', label: 'Citas Completadas' },
+    { key: 'canceladas', label: 'Citas Canceladas' },
+    { key: 'confirmadas', label: 'Citas Confirmadas' },
+    { key: 'total_citas', label: 'Total Citas' },
+    { key: 'este_mes', label: 'Citas Este Mes' },
+    { key: 'esta_semana', label: 'Citas Esta Semana' },
   ];
 
+  // Render directo de los datos tal como vienen del API
   if (error) {
     return (
       <div className="p-4 text-red-600 bg-red-50 rounded-lg">
@@ -194,23 +86,33 @@ const StatsCards = () => {
     );
   }
 
+  if (!stats) {
+    return <div className="p-4 text-gray-500">No hay datos de estadísticas.</div>;
+  }
+
+  // Render con IU moderna y ordenada
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-      {statsConfig.map((stat, index) => (
-        <Card key={index} className="hover:shadow-md transition-shadow">
+      {fieldOrder.filter(f => stats[f.key] !== undefined).map((f, idx) => (
+        <Card key={f.key} className="hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">{stat.title}</CardTitle>
-            <div className={`p-2 rounded-lg ${stat.bgColor}`}>
-              <stat.icon className={`h-4 w-4 ${stat.color}`} />
-            </div>
+            <CardTitle className="text-sm font-medium text-gray-600">{f.label}</CardTitle>
+            <span className={`shrink-0 rounded-lg p-2 ${iconMap[f.key]?.bg || iconMap.otros.bg}`}>{iconMap[f.key]?.icon || iconMap.otros.icon}</span>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {stats ? stat.getValue(stats) : '-'}
-            </div>
-            <p className="text-xs text-gray-500 mt-1">
-              {stats ? stat.getChange(stats) : '-'}
-            </p>
+            <div className="text-2xl font-bold">{String(stats[f.key])}</div>
+          </CardContent>
+        </Card>
+      ))}
+      {/* Mostrar cualquier campo adicional no listado arriba */}
+      {Object.entries(stats).filter(([key]) => !fieldOrder.some(f => f.key === key)).map(([key, value]) => (
+        <Card key={key} className="hover:shadow-md transition-shadow">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600 capitalize">{key.replace(/_/g, ' ')}</CardTitle>
+            <span className={`shrink-0 rounded-lg p-2 ${iconMap[key]?.bg || iconMap.otros.bg}`}>{iconMap[key]?.icon || iconMap.otros.icon}</span>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{String(value)}</div>
           </CardContent>
         </Card>
       ))}

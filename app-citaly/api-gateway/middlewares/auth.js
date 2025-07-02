@@ -22,7 +22,7 @@ const errorHandler = (err, req, res, next) => {
     timestamp: new Date().toISOString()
   });
 
-  // No enviar el stack trace en producción
+  // No enviar el stack trace en producciï¿½n
   const message = process.env.NODE_ENV === 'production'
     ? 'Internal server error'
     : err.message;
@@ -37,34 +37,42 @@ const errorHandler = (err, req, res, next) => {
 const verifyToken = (req, res, next) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
-
+  console.log('Auth header:', authHeader);
+  console.log('Token recibido:', token);
   if (token == null) {
+    console.log('No se recibiÃ³ token');
     return res.sendStatus(401); // No hay token, no autorizado
   }
 
   jwt.verify(token, process.env.JWT_SECRET || 'your_jwt_secret', (err, user) => {
     if (err) {
-      logger.error('Error en verificación de token JWT:', err);
-      return res.sendStatus(403); // Token inválido o expirado
+      logger.error('Error en verificaciÃ³n de token JWT:', err);
+      console.log('Error al verificar token:', err);
+      return res.sendStatus(403); // Token invÃ¡lido o expirado
     }
 
-    // Validar que empresa_id esté presente
+    // Log detallado del payload decodificado
+    console.log('Payload decodificado:', JSON.stringify(user, null, 2));
+    logger.info('Payload decodificado en verifyToken:', user);
+
+    // Validar que empresa_id estÃ© presente
     if (!user || !user.empresa_id) {
       logger.error('Token JWT sin empresa_id:', user);
-      return res.status(403).json({ error: 'Token inválido: faltan datos de empresa' });
+      console.log('Token JWT sin empresa_id:', user);
+      return res.status(403).json({ error: 'Token invÃ¡lido: faltan datos de empresa', payload: user });
     }
 
-    // Asegurarnos de que company_id esté presente para compatibilidad con otras partes del código
+    // Asegurarnos de que company_id estÃ© presente para compatibilidad con otras partes del cÃ³digo
     req.user = {
       ...user,
-      company_id: user.empresa_id // Asegurar que ambos estén disponibles
+      company_id: user.empresa_id // Asegurar que ambos estÃ©n disponibles
     };
     req.companyId = user.empresa_id; // Adjuntar companyId para usarlo en otros controladores
     next();
   });
 };
 
-// Middleware para validar parámetros requeridos
+// Middleware para validar parï¿½metros requeridos
 const validateRequired = (fields) => {
   return (req, res, next) => {
     const missing = [];
@@ -93,7 +101,7 @@ const validateEmail = (req, res, next) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       return res.status(400).json({
-        error: 'El formato del email no es válido'
+        error: 'El formato del email no es vï¿½lido'
       });
     }
   }

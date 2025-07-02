@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { Calendar, ChevronDown } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Button } from "./ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from "./ui/dropdown-menu";
+import { formatDateToString } from '../utils/dateUtils';
 
 interface DateRange {
   start: string;
@@ -19,10 +20,6 @@ interface DateRangeFilterProps {
 }
 
 const DateRangeFilter = ({ selectedRange, onRangeChange }: DateRangeFilterProps) => {
-  const formatDateToString = (date: Date): string => {
-    return date.toISOString().split('T')[0];
-  };
-
   const getDateRange = (rangeType: string): DateRange => {
     const today = new Date();
     
