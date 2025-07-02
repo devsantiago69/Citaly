@@ -1,29 +1,30 @@
-import { Toaster } from "components/ui/toaster";
-import { Toaster as Sonner } from "components/ui/sonner";
-import { TooltipProvider } from "components/ui/tooltip";
+import { Toaster } from "./components/ui/toaster";
+import { Toaster as Sonner } from "./components/ui/sonner";
+import { TooltipProvider } from "./components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { AuthProvider } from "contexts/AuthContext";
-import { ThemeProvider } from "contexts/ThemeContext";
-import MainLayout from "components/MainLayout";
-import Index from "pages/Index";
-import NotFound from "pages/NotFound";
-import CategoryManagement from "components/CategoryManagement";
-import SpecialtiesPage from "pages/SpecialtiesPage";
-import ServiceManagement from "components/ServiceManagement";
-import AppointmentCalendar from "components/AppointmentCalendar";
-import AppointmentsDataTable from "components/AppointmentsDataTable";
-import UserManagement from "components/UserManagement";
-import StaffManagement from "components/StaffManagement";
-import ReportsPanel from "components/ReportsPanel";
-import CompanyInfo from "components/CompanyInfo";
-import AdminProfile from "components/AdminProfile";
-import AdminManagement from "components/AdminManagement";
-import BillingPanel from "components/BillingPanel";
-import SettingsPanel from "components/SettingsPanel";
-import ReminderManagement from "components/ReminderManagement";
-import LoginForm from "components/LoginForm";
-import ProtectedRoute from "components/ProtectedRoute";
+import { AuthProvider } from "./contexts/AuthContext";
+import { ThemeProvider } from "./contexts/ThemeContext";
+import MainLayout from "./components/MainLayout";
+import Index from "./pages/Index";
+import NotFound from "./pages/NotFound";
+import CategoryManagement from "./components/CategoryManagement";
+import SpecialtiesPage from "./pages/SpecialtiesPage";
+import ServiceManagement from "./components/ServiceManagement";
+import AppointmentCalendar from "./components/AppointmentCalendar";
+import AppointmentsDataTable from "./components/AppointmentsDataTable";
+import UserManagement from "./components/UserManagement";
+import StaffManagement from "./components/StaffManagement";
+import ReportsPanel from "./components/ReportsPanel";
+import CompanyInfo from "./components/CompanyInfo";
+import AdminProfile from "./components/AdminProfile";
+import AdminManagement from "./components/AdminManagement";
+import Billing from "./components/Billing";
+import Branches from "./components/Branches";
+import SettingsPanel from "./components/SettingsPanel";
+import ReminderManagement from "./components/ReminderManagement";
+import LoginForm from "./components/LoginForm";
+import ProtectedRoute from "./components/ProtectedRoute";
 
 const queryClient = new QueryClient();
 
@@ -53,7 +54,8 @@ const App = () => {
                   <Route path="company" element={<CompanyInfo />} />
                   <Route path="admin" element={<AdminManagement />} />
                   <Route path="profile" element={<AdminProfile />} />
-                  <Route path="billing" element={<BillingPanel />} />
+                  <Route path="billing" element={<Billing />} />
+                  <Route path="branches" element={<Branches />} />
                   <Route path="settings" element={<SettingsPanel />} />
                   <Route path="reminders" element={<ReminderManagement />} />
                 </Route>

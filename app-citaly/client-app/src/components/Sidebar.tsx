@@ -15,16 +15,17 @@ const Sidebar = () => {
     { id: "calendar", label: "Calendario", icon: Calendar, path: "/calendar" },
     { id: "appointments", label: "Citas", icon: Clock, path: "/appointments" },
     { id: "services", label: "Servicios", icon: Settings, path: "/services" },
-    { id: "categories", label: "Categorías", icon: Palette, path: "/categories" },
+    { id: "categories", label: "Categorï¿½as", icon: Palette, path: "/categories" },
     { id: "specialties", label: "Especialidades", icon: Award, path: "/specialties" },
     { id: "users", label: "Clientes", icon: Users, path: "/users" },
     { id: "staff", label: "Staff", icon: UserCheck, path: "/staff" },
     { id: "reports", label: "Reportes", icon: BarChart3, path: "/reports" },
     { id: "company-info", label: "Mi Empresa", icon: Building, path: "/company" },
     { id: "admin-profile", label: "Mi Perfil", icon: User, path: "/profile" },
-    { id: "admin-management", label: "Administración", icon: Shield, path: "/admin" },
-    { id: "billing", label: "Facturación", icon: CreditCard, path: "/billing" },
-    { id: "settings", label: "Configuración", icon: Cog, path: "/settings" },
+    { id: "admin-management", label: "Administraciï¿½n", icon: Shield, path: "/admin" },
+    { id: "branches", label: "Sucursales", icon: Building, path: "/branches" },
+    { id: "billing", label: "FacturaciÃ³n", icon: CreditCard, path: "/billing" },
+    { id: "settings", label: "ConfiguraciÃ³n", icon: Cog, path: "/settings" },
     { id: "reminders", label: "Recordatorios", icon: Bell, path: "/reminders" },
   ];
 
@@ -123,7 +124,7 @@ const Sidebar = () => {
               onClick={logout}
             >
               <LogOut className={cn("h-5 w-5", !isCollapsed && "mr-3")} />
-              {!isCollapsed && <span>Cerrar Sesión</span>}
+              {!isCollapsed && <span>Cerrar Sesiï¿½n</span>}
             </Button>
           </div>
         </div>

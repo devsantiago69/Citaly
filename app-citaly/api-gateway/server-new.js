@@ -1,3 +1,7 @@
+// Rutas de facturación (nuevo sistema)
+const billingRoutes = require('./routes/billing.routes');
+// Rutas de facturación (nuevo sistema)
+app.use('/api/billing', billingRoutes);
 const express = require('express');
 const cors = require('cors');
 const http = require('http');
