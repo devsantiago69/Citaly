@@ -1,7 +1,3 @@
-// Rutas de facturación (nuevo sistema)
-const billingRoutes = require('./routes/billing.routes');
-// Rutas de facturación (nuevo sistema)
-app.use('/api/billing', billingRoutes);
 const express = require('express');
 const cors = require('cors');
 const http = require('http');
@@ -10,6 +6,9 @@ const logger = require('./logger');
 const { requestLogger, errorHandler, verifyToken } = require('./middlewares/auth');
 const socketManager = require('./config/socket');
 // const webhookManager = require('./config/webhooks');
+
+// Rutas de facturación (nuevo sistema)
+const billingRoutes = require('./routes/billing.routes');
 
 // Importar rutas principales
 const authRoutes = require('./routes/auth.routes');
@@ -23,7 +22,7 @@ const cajasRoutes = require('./routes/cajas.routes');
 const clientesRoutes = require('./routes/clientes.routes');
 const personalRoutes = require('./routes/personal.routes');
 const facturacionRoutes = require('./routes/facturacion.routes');
-const serviciosNewRoutes = require('./routes/servicios-new.routes');
+// const serviciosNewRoutes = require('./routes/servicios-new.routes');
 const appointmentsRoutes = require('./routes/appointments.routes');
 
 
@@ -54,6 +53,8 @@ app.use((req, res, next) => {
 });
 
 // ...existing code...
+// Rutas de facturación (nuevo sistema)
+app.use('/api/billing', billingRoutes);
 
 // Rutas de calendario (nuevo sistema) - DEBE IR DESPUÉS DE LOS MIDDLEWARES DE CORS
 app.use('/api/calendario', calendarioRoutes);
@@ -152,7 +153,7 @@ app.use('/api/facturacion', facturacionRoutes);
 app.use('/api/citas-new', citasNewRoutes);
 
 // Rutas de servicios (nueva estructura)
-app.use('/api/servicios-new', serviciosNewRoutes);
+// app.use('/api/servicios-new', serviciosNewRoutes);
 
 // ===== RUTAS EXISTENTES (COMPATIBILIDAD) =====
 

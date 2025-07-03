@@ -1,23 +1,14 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { api } from "../config/api";
-import {
-  Table,
-  TableHeader,
-  TableBody,
-  TableHead,
-  TableRow,
-  TableCell,
-} from "./ui/table";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { Calendar } from "./ui/calendar";
-import { addDays, format, isSameDay, parseISO } from "date-fns";
+import { format, isSameDay, parseISO } from "date-fns";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
-import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
-import { Separator } from "./ui/separator";
+import { Avatar, AvatarFallback } from "./ui/avatar";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "./ui/tabs";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent } from "./ui/dropdown-menu";
 import { UserIcon, PhoneIcon, MailIcon, XIcon, StoreIcon, CreditCardIcon, EyeIcon, MoreVertical, Eraser } from "lucide-react";
@@ -178,6 +169,7 @@ export default function AppointmentsDataTable() {
 
   return (
     <div className="space-y-4">
+      {/* Filtros */}
       <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-2 md:gap-4">
         <div className="flex flex-wrap gap-2 items-end">
           <Input
@@ -255,132 +247,148 @@ export default function AppointmentsDataTable() {
       {error && (
         <div className="bg-red-100 text-red-800 px-4 py-2 rounded mb-2">{error}</div>
       )}
-      <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white shadow">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Fecha</TableHead>
-              <TableHead>Hora</TableHead>
-              <TableHead>Cliente</TableHead>
-              <TableHead>Servicio</TableHead>
-              <TableHead>Profesional</TableHead>
-              <TableHead>Sucursal</TableHead>
-              <TableHead>Estado</TableHead>
-              <TableHead>Pago</TableHead>
-              <TableHead>Medio de Pago</TableHead>
-              <TableHead>Acciones</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {loading ? (
-              <TableRow>
-                <TableCell colSpan={10} className="text-center">Cargando...</TableCell>
-              </TableRow>
-            ) : filteredAppointments.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={10} className="text-center">No hay citas que coincidan con los filtros.</TableCell>
-              </TableRow>
-            ) : (
-              filteredAppointments.map((apt) => (
-                <TableRow key={apt.id} className="hover:bg-blue-50 cursor-pointer" onClick={() => setSelected(apt)}>
-                  <TableCell>{format(parseISO(apt.fecha), "yyyy-MM-dd")}</TableCell>
-                  <TableCell>{apt.hora}</TableCell>
-                  <TableCell>{apt.cliente.nombre_completo}</TableCell>
-                  <TableCell>{apt.servicio.nombre}</TableCell>
-                  <TableCell>{apt.personal?.nombre || "-"}</TableCell>
-                  <TableCell>{apt.sucursal.nombre}</TableCell>
-                  <TableCell>
-                    <Badge className={statusColors[apt.estado] || "bg-gray-100 text-gray-800"}>{apt.estado}</Badge>
-                  </TableCell>
-                  <TableCell>{apt.estado_pago || "-"}</TableCell>
-                  <TableCell>{apt.medio_pago || "-"}</TableCell>
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button size="sm" variant="outline" onClick={e => e.stopPropagation()}>
-                          <MoreVertical className="w-4 h-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => setSelected(apt)}>
-                          <EyeIcon className="w-4 h-4 mr-2" /> Ver Detalles
-                        </DropdownMenuItem>
-                        <DropdownMenuSub>
-                          <DropdownMenuSubTrigger>
-                            <XIcon className="w-4 h-4 mr-2 text-red-500" /> Opciones de Cita
-                          </DropdownMenuSubTrigger>
-                          <DropdownMenuSubContent>
-                            <DropdownMenuItem onClick={() => handleCancelarCita(apt)} disabled={apt.estado === 'Cancelada'}>
-                              <XIcon className="w-4 h-4 mr-2 text-red-500" /> Cancelar cita
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleReagendarCita(apt)} disabled={apt.estado === 'Cancelada'}>
-                              <StoreIcon className="w-4 h-4 mr-2 text-blue-500" /> Reagendar cita
-                            </DropdownMenuItem>
-                          </DropdownMenuSubContent>
-                        </DropdownMenuSub>
-                        <DropdownMenuItem onClick={() => handleAsignarSucursal(apt)}>
-                          <StoreIcon className="w-4 h-4 mr-2 text-blue-500" /> Asignar a otra sucursal
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handlePagarCita(apt)}>
-                          <CreditCardIcon className="w-4 h-4 mr-2 text-green-500" /> Pagar cita
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
+      {/* Tarjetas de citas */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {loading ? (
+          <div className="col-span-full text-center py-8">Cargando...</div>
+        ) : filteredAppointments.length === 0 ? (
+          <div className="col-span-full text-center py-8">No hay citas que coincidan con los filtros.</div>
+        ) : (
+          filteredAppointments.map((apt) => (
+            <Card key={apt.id} className="rounded-2xl shadow-lg border border-blue-100 hover:shadow-2xl transition-shadow duration-200 cursor-pointer flex flex-col justify-between">
+              <CardHeader className="flex flex-row items-center gap-4 border-b bg-blue-50 rounded-t-2xl py-4 px-6">
+                <Avatar className="w-12 h-12 shrink-0">
+                  <AvatarFallback><UserIcon /></AvatarFallback>
+                </Avatar>
+                <div className="flex-1 min-w-0">
+                  <CardTitle className="text-lg flex items-center gap-2 truncate">
+                    {apt.cliente.nombre_completo}
+                    <Badge variant="secondary" className="ml-2">Cliente</Badge>
+                  </CardTitle>
+                  <div className="flex items-center gap-2 text-sm text-gray-600 mt-1 flex-wrap">
+                    <PhoneIcon className="w-4 h-4" /> {apt.cliente.telefono}
+                    <MailIcon className="w-4 h-4 ml-4" /> {apt.cliente.email}
+                  </div>
+                  <div className="mt-2">
+                    <Badge className={statusColors[apt.estado] || "bg-gray-100 text-gray-800"}>
+                      {apt.estado}
+                    </Badge>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="p-4 flex flex-col gap-2">
+                <div className="flex flex-wrap gap-4 mb-2">
+                  <div className="flex flex-col text-xs text-gray-500">
+                    <span className="font-bold text-base text-blue-900">{apt.servicio.nombre}</span>
+                    <span>Duración: {apt.servicio.duracion} min</span>
+                    <span>Precio: ${apt.servicio.precio}</span>
+                  </div>
+                  <div className="flex flex-col text-xs text-gray-500">
+                    <span className="font-bold">Profesional:</span>
+                    <span>{apt.personal?.nombre || "-"}</span>
+                  </div>
+                  <div className="flex flex-col text-xs text-gray-500">
+                    <span className="font-bold">Sucursal:</span>
+                    <span>{apt.sucursal.nombre}</span>
+                  </div>
+                  <div className="flex flex-col text-xs text-gray-500">
+                    <span className="font-bold">Fecha:</span>
+                    <span>{format(parseISO(apt.fecha), "yyyy-MM-dd")}</span>
+                    <span className="font-bold mt-1">Hora: <span className="font-normal">{apt.hora}</span></span>
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-3 mb-2">
+                  <Badge variant="secondary" className="bg-green-50 text-green-700 border border-green-200">Pago: {apt.estado_pago || "-"}</Badge>
+                  <Badge variant="secondary" className="bg-blue-50 text-blue-700 border border-blue-200">Medio: {apt.medio_pago || "-"}</Badge>
+                  <Badge variant="secondary" className="bg-gray-50 text-gray-700 border border-gray-200">Canal: {apt.canal || "-"}</Badge>
+                  <Badge variant="secondary" className="bg-gray-50 text-gray-700 border border-gray-200">Origen: {apt.origen || "-"}</Badge>
+                </div>
+                <div className="flex justify-end gap-2 mt-2">
+                  <Button size="sm" variant="outline" onClick={e => { e.stopPropagation(); setSelected(apt); }}>
+                    <EyeIcon className="w-4 h-4 mr-2" /> Ver Detalles
+                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button size="sm" variant="outline" onClick={e => e.stopPropagation()}>
+                        <MoreVertical className="w-4 h-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => handleCancelarCita(apt)} disabled={apt.estado === 'Cancelada'}>
+                        <XIcon className="w-4 h-4 mr-2 text-red-500" /> Cancelar cita
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleReagendarCita(apt)} disabled={apt.estado === 'Cancelada'}>
+                        <StoreIcon className="w-4 h-4 mr-2 text-blue-500" /> Reagendar cita
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleAsignarSucursal(apt)}>
+                        <StoreIcon className="w-4 h-4 mr-2 text-blue-500" /> Asignar a otra sucursal
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handlePagarCita(apt)}>
+                        <CreditCardIcon className="w-4 h-4 mr-2 text-green-500" /> Pagar cita
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              </CardContent>
+            </Card>
+          ))
+        )}
       </div>
       {/* Detalle de la cita mejorado */}
       {selected && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <Card className="relative w-full max-w-2xl p-0">
-            <Button size="icon" variant="ghost" className="absolute top-2 right-2 z-10" onClick={() => setSelected(null)}>
-              <XIcon className="w-5 h-5" />
-            </Button>
-            <CardHeader className="flex flex-row items-center gap-4 border-b">
-              <Avatar className="w-16 h-16">
-                <AvatarFallback><UserIcon /></AvatarFallback>
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 animate-fade-in">
+          <Card className="relative w-full max-w-2xl p-0 shadow-2xl border-2 border-blue-200 rounded-3xl overflow-hidden">
+            <div className="absolute top-4 right-4 z-10">
+              <Button size="icon" variant="ghost" className="hover:bg-red-100" onClick={() => setSelected(null)} aria-label="Cerrar Detalle">
+                <XIcon className="w-6 h-6 text-gray-500 hover:text-red-500 transition" />
+              </Button>
+            </div>
+            <CardHeader className="flex flex-row items-center gap-6 border-b bg-gradient-to-r from-blue-50 to-blue-100 py-6 px-8">
+              <Avatar className="w-20 h-20 shadow-md border-2 border-blue-200">
+                <AvatarFallback><UserIcon className="w-10 h-10" /></AvatarFallback>
               </Avatar>
-              <div>
-                <CardTitle className="text-lg flex items-center gap-2">
+              <div className="flex-1 min-w-0">
+                <CardTitle className="text-2xl font-bold flex items-center gap-2 truncate text-blue-900">
                   {selected.cliente.nombre_completo}
-                  <Badge variant="secondary" className="ml-2">Cliente</Badge>
+                  <Badge variant="secondary" className="ml-2 bg-blue-200 text-blue-900">Cliente</Badge>
                 </CardTitle>
-                <div className="flex items-center gap-2 text-sm text-gray-600 mt-1">
-                  <PhoneIcon className="w-4 h-4" /> {selected.cliente.telefono}
-                  <MailIcon className="w-4 h-4 ml-4" /> {selected.cliente.email}
+                <div className="flex items-center gap-4 text-base text-gray-700 mt-2 flex-wrap">
+                  <span className="flex items-center gap-1"><PhoneIcon className="w-4 h-4" /> {selected.cliente.telefono}</span>
+                  <span className="flex items-center gap-1"><MailIcon className="w-4 h-4" /> {selected.cliente.email}</span>
+                </div>
+                <div className="mt-3">
+                  <Badge className={statusColors[selected.estado] || "bg-gray-100 text-gray-800"}>
+                    {selected.estado}
+                  </Badge>
                 </div>
               </div>
             </CardHeader>
-            <CardContent className="p-6">
+            <CardContent className="p-8 bg-white">
               <Tabs defaultValue="info" className="w-full">
-                <TabsList className="mb-4">
-                  <TabsTrigger value="info">Información</TabsTrigger>
-                  <TabsTrigger value="notas">Notas</TabsTrigger>
+                <TabsList className="mb-6 flex gap-2">
+                  <TabsTrigger value="info" className="rounded-full px-6 py-2 text-base">Información</TabsTrigger>
+                  <TabsTrigger value="notas" className="rounded-full px-6 py-2 text-base">Notas</TabsTrigger>
                 </TabsList>
                 <TabsContent value="info">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2"><b>Servicio:</b> {selected.servicio.nombre} <span className="text-xs text-gray-500">({selected.servicio.duracion} min, ${selected.servicio.precio})</span></div>
-                      <div className="flex items-center gap-2"><b>Profesional:</b> {selected.personal?.nombre || "-"}</div>
-                      <div className="flex items-center gap-2"><b>Sucursal:</b> {selected.sucursal.nombre} <span className="text-xs text-gray-500">({selected.sucursal.direccion})</span></div>
-                      <div className="flex items-center gap-2"><b>Fecha:</b> {format(parseISO(selected.fecha), "yyyy-MM-dd")} <b className="ml-2">Hora:</b> {selected.hora}</div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2 text-lg"><b>Servicio:</b> <span className="text-blue-900 font-semibold">{selected.servicio.nombre}</span> <span className="text-xs text-gray-500">({selected.servicio.duracion} min, ${selected.servicio.precio})</span></div>
+                      <div className="flex items-center gap-2 text-lg"><b>Profesional:</b> <span className="text-blue-900">{selected.personal?.nombre || "-"}</span></div>
+                      <div className="flex items-center gap-2 text-lg"><b>Sucursal:</b> <span className="text-blue-900">{selected.sucursal.nombre}</span> <span className="text-xs text-gray-500">({selected.sucursal.direccion})</span></div>
+                      <div className="flex items-center gap-2 text-lg"><b>Fecha:</b> <span className="text-blue-900">{format(parseISO(selected.fecha), "yyyy-MM-dd")}</span> <b className="ml-2">Hora:</b> <span className="text-blue-900">{selected.hora}</span></div>
                     </div>
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2"><b>Estado:</b> <Badge className={statusColors[selected.estado] || "bg-gray-100 text-gray-800"}>{selected.estado}</Badge></div>
-                      <div className="flex items-center gap-2"><b>Pago:</b> {selected.estado_pago || "-"}</div>
-                      <div className="flex items-center gap-2"><b>Medio de Pago:</b> {selected.medio_pago || "-"}</div>
-                      <div className="flex items-center gap-2"><b>Canal:</b> {selected.canal || "-"}</div>
-                      <div className="flex items-center gap-2"><b>Origen:</b> {selected.origen || "-"}</div>
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2 text-lg"><b>Estado:</b> <Badge className={statusColors[selected.estado] || "bg-gray-100 text-gray-800"}>{selected.estado}</Badge></div>
+                      <div className="flex items-center gap-2 text-lg"><b>Pago:</b> <span className="text-blue-900">{selected.estado_pago || "-"}</span></div>
+                      <div className="flex items-center gap-2 text-lg"><b>Medio de Pago:</b> <span className="text-blue-900">{selected.medio_pago || "-"}</span></div>
+                      <div className="flex items-center gap-2 text-lg"><b>Canal:</b> <span className="text-blue-900">{selected.canal || "-"}</span></div>
+                      <div className="flex items-center gap-2 text-lg"><b>Origen:</b> <span className="text-blue-900">{selected.origen || "-"}</span></div>
                     </div>
                   </div>
                 </TabsContent>
                 <TabsContent value="notas">
-                  <div className="bg-gray-50 rounded p-3 min-h-[60px] text-gray-700">
-                    {selected.notas || <span className="text-gray-400">Sin notas</span>}
+                  <div className="bg-blue-50 rounded-xl p-4 min-h-[80px] text-gray-700 text-lg shadow-inner">
+                    {selected.notas ? selected.notas : <span className="text-gray-400">Sin notas</span>}
                   </div>
                 </TabsContent>
               </Tabs>

@@ -58,7 +58,7 @@ const NewAppointmentDialog = ({ open, onOpenChange }: NewAppointmentDialogProps)
           throw new Error('Network response was not ok');
         }
         const data = await response.json();
-        setServices(data);
+        setServices(data.servicios || []);
       } catch (error) {
         console.error("Error fetching services:", error);
       }
