@@ -1,231 +1,205 @@
-<<<<<<< HEAD
-# ?? Citaly - Sistema de GestiÛn de Citas MÈdicas
+# Citaly - Sistema de Gesti√≥n de Citas con Google Calendar
 
-Sistema integral de gestiÛn de citas mÈdicas con dashboard administrativo, desarrollado con React/TypeScript (frontend) y Node.js/Express (backend).
+Sistema completo de gesti√≥n de citas m√©dicas y de servicios con integraci√≥n bidireccional con Google Calendar.
 
-## ?? Ca? **°Dale una estrella si este proyecto te fue ˙til!** ?erÌsticas Principales
+## üöÄ Caracter√≠sticas Principales
 
-- ? **Dashboard en Tiempo Real** - VisualizaciÛn de estadÌsticas y mÈtricas
-- ? **GestiÛn de Citas** - ProgramaciÛn, confirmaciÛn y seguimiento
-- ? **GestiÛn de Pacientes** - Registro completo de clientes/pacientes
-- ? **GestiÛn de Personal** - AdministraciÛn de staff mÈdico
-- ? **GestiÛn de Servicios** - Cat·logo de servicios mÈdicos
-- ? **Especialidades** - Manejo de especialidades mÈdicas
-- ? **Modo Offline** - Funciona con datos de prueba cuando no hay backend
-- ? **API RESTful** - Backend modular y escalable
-- ? **Base de Datos MySQL** - Esquema completo para gestiÛn mÈdica
+### ‚úÖ Gesti√≥n de Citas
+- Calendario interactivo con vista mensual
+- Creaci√≥n, edici√≥n y cancelaci√≥n de citas
+- Estados de cita (programada, confirmada, completada, cancelada)
+- Notificaciones y recordatorios autom√°ticos
 
-## ?? Estructura del Proyecto
+### ‚úÖ Integraci√≥n Google Calendar
+- **Sincronizaci√≥n bidireccional** con Google Calendar
+- **M√∫ltiples calendarios** por usuario
+- **Sincronizaci√≥n autom√°tica** configurable
+- **Resoluci√≥n de conflictos** inteligente
+- **Webhooks** para cambios en tiempo real
 
-```
-citaly/
-??? app-citaly/
-?   ??? client-app/          # Frontend React/TypeScript
-?   ??? api-gateway/         # Backend Node.js/Express
-?   ??? admin-panel/         # Panel administrativo
-?   ??? automation/          # Scripts de automatizaciÛn
-?   ??? db/                  # Base de datos y migraciones
-??? start-backend.bat        # Script para iniciar backend
-??? start-frontend.bat       # Script para iniciar frontend
-??? DASHBOARD-FIX-README.md  # DocumentaciÛn de correcciones
-```
+### ‚úÖ Gesti√≥n de Usuarios
+- Clientes con informaci√≥n m√©dica completa
+- Personal con especialidades y servicios
+- Tipos de usuario con permisos granulares
+- Autenticaci√≥n segura con Supabase Auth
 
-## ??? TecnologÌas Utilizadas
+### ‚úÖ Servicios y Categor√≠as
+- Cat√°logo completo de servicios
+- Categor√≠as personalizables
+- Precios por sucursal
+- Especialidades del personal
 
-### Frontend
-- **React 18** con TypeScript
-- **Vite** como bundler
-- **Tailwind CSS** para estilos
-- **Shadcn/ui** para componentes
-- **React Router** para navegaciÛn
-- **Date-fns** para manejo de fechas
-- **Recharts** para gr·ficos
+### ‚úÖ Reportes y Analytics
+- Dashboard con m√©tricas en tiempo real
+- Reportes de ingresos y rendimiento
+- Exportaci√≥n a PDF, Excel y CSV
+- Gr√°ficos interactivos
 
-### Backend
-- **Node.js** con Express
-- **MySQL** como base de datos
-- **JWT** para autenticaciÛn
-- **Socket.IO** para tiempo real
-- **Webhooks** para integraciones
-- **Arquitectura modular** (controladores, rutas, servicios)
+## üõ†Ô∏è Tecnolog√≠as
 
-## ?? Inicio R·pido
+- **Frontend**: React + TypeScript + Vite
+- **Backend**: Supabase (PostgreSQL + Edge Functions)
+- **UI**: shadcn/ui + Tailwind CSS
+- **Autenticaci√≥n**: Supabase Auth
+- **Base de datos**: PostgreSQL con RLS
+- **API Externa**: Google Calendar API
+- **Gr√°ficos**: Recharts
 
-### Prerrequisitos
+## üìã Configuraci√≥n Inicial
 
-- Node.js (v18 o superior)
-- MySQL (v8 o superior)
-- Git
+### 1. Configurar Supabase
 
-### InstalaciÛn
+1. Crea un proyecto en [Supabase](https://supabase.com)
+2. Copia las credenciales del proyecto
+3. Ejecuta las migraciones de base de datos
 
-1. **Clonar el repositorio:**
-   ```bash
-   git clone https://github.com/tu-usuario/citaly-dashboard.git
-   cd citaly-dashboard
-   ```
+### 2. Configurar Google Calendar API
 
-2. **Configurar Base de Datos:**
-   ```bash
-   # Crear base de datos en MySQL
-   mysql -u root -p
-   CREATE DATABASE citaly_db;
+1. Ve a [Google Cloud Console](https://console.cloud.google.com)
+2. Crea un nuevo proyecto o selecciona uno existente
+3. Habilita la Google Calendar API
+4. Crea credenciales OAuth 2.0:
+   - Tipo: Aplicaci√≥n web
+   - URIs de redirecci√≥n: `http://localhost:5173/auth/google/callback`
+5. Copia el Client ID y Client Secret
 
-   # Importar esquema
-   mysql -u root -p citaly_db < app-citaly/db/sql.sql
-   ```
+### 3. Variables de Entorno
 
-3. **Configurar Backend:**
-   ```bash
-   cd app-citaly/api-gateway
-   npm install
+Crea un archivo `.env` basado en `.env.example`:
 
-   # Configurar variables de entorno (crear .env)
-   cp .env.example .env
-   # Editar .env con tus credenciales de base de datos
-   ```
-
-4. **Configurar Frontend:**
-   ```bash
-   cd ../client-app
-   npm install
-   ```
-
-### Ejecutar el Proyecto
-
-#### OpciÛn 1: Scripts Autom·ticos (Windows)
 ```bash
-# Terminal 1: Backend
-start-backend.bat
+# Supabase
+VITE_SUPABASE_URL=https://tu-proyecto.supabase.co
+VITE_SUPABASE_ANON_KEY=tu_anon_key
 
-# Terminal 2: Frontend
-start-frontend.bat
+# Google Calendar
+VITE_GOOGLE_CLIENT_ID=tu_google_client_id
+VITE_GOOGLE_CLIENT_SECRET=tu_google_client_secret
+VITE_GOOGLE_REDIRECT_URI=http://localhost:5173/auth/google/callback
 ```
 
-#### OpciÛn 2: Manual
-```bash
-# Terminal 1: Backend
-cd app-citaly/api-gateway
-npm start
+### 4. Instalaci√≥n
 
-# Terminal 2: Frontend
-cd app-citaly/client-app
+```bash
+# Instalar dependencias
+npm install
+
+# Iniciar servidor de desarrollo
 npm run dev
 ```
 
-### Acceso
-- **Frontend:** http://localhost:5173
-- **Backend API:** http://localhost:3001
-- **Health Check:** http://localhost:3001/health
+## üîÑ Flujo de Sincronizaci√≥n Google Calendar
 
-## ?? Dashboard
+### Configuraci√≥n Inicial
+1. Usuario autoriza acceso a Google Calendar
+2. Sistema obtiene tokens de acceso y refresh
+3. Se listan calendarios disponibles
+4. Usuario selecciona calendarios a sincronizar
 
-El dashboard incluye:
+### Sincronizaci√≥n Autom√°tica
+1. **Importaci√≥n**: Eventos de Google ‚Üí Citas en Citaly
+2. **Exportaci√≥n**: Citas de Citaly ‚Üí Eventos en Google
+3. **Bidireccional**: Ambas direcciones seg√∫n configuraci√≥n
 
-- ?? **EstadÌsticas en Tiempo Real** - Ingresos, citas totales, tasa de completitud
-- ?? **PrÛximas Citas** - Vista del dÌa actual
-- ?? **Servicios Populares** - Los m·s solicitados
-- ?? **Gr·ficos Interactivos** - VisualizaciÛn de datos
-- ? **Modo Prueba** - Funciona sin backend con datos de ejemplo
+### Resoluci√≥n de Conflictos
+- **Manual**: Usuario decide qu√© cambio mantener
+- **Google gana**: Prioridad a cambios en Google Calendar
+- **Sistema gana**: Prioridad a cambios en Citaly
+- **M√°s reciente gana**: Prioridad al cambio m√°s reciente
 
-## ??? Base de Datos
+### Webhooks en Tiempo Real
+- Google notifica cambios instant√°neamente
+- Sistema programa sincronizaci√≥n autom√°tica
+- Logs detallados de todas las operaciones
+
+## üìä Estructura de Base de Datos
 
 ### Tablas Principales
+- `empresas` - Informaci√≥n de empresas
+- `usuarios` - Usuarios del sistema
+- `citas` - Citas y eventos
+- `servicios` - Cat√°logo de servicios
+- `clientes` - Informaci√≥n de clientes
 
-- `empresas` - InformaciÛn de clÌnicas/consultorios
-- `usuarios` - Sistema de usuarios (admin/personal/clientes)
-- `clientes` - InformaciÛn detallada de pacientes
-- `servicios` - Cat·logo de servicios mÈdicos
-- `especialidades` - Especialidades mÈdicas
-- `citas` - ProgramaciÛn de citas
-- `personal` - GestiÛn de staff mÈdico
-- `suscripciones` - Sistema de facturaciÛn (SaaS)
+### Tablas Google Calendar
+- `google_calendars` - Calendarios sincronizados
+- `google_events` - Eventos importados
+- `calendar_sync_logs` - Historial de sincronizaci√≥n
+- `sync_configuration` - Configuraci√≥n por empresa
 
-### CaracterÌsticas de la BD
+## üîê Seguridad
 
-- ? **Multi-tenant** - Soporte para m˙ltiples empresas
-- ? **AuditorÌa** - Historial de cambios
-- ? **FacturaciÛn** - Sistema SaaS completo
-- ? **Notificaciones** - Sistema de alertas
-- ? **Reportes** - Datos para analytics
+- **Row Level Security (RLS)** en todas las tablas
+- **Pol√≠ticas granulares** basadas en empresa y usuario
+- **Tokens encriptados** para Google Calendar
+- **Autenticaci√≥n JWT** con Supabase
+- **Permisos por tipo de usuario**
 
-## ?? API Endpoints
+## üöÄ Despliegue
 
-### Principales MÛdulos
-
-```
-/api/appointments     # GestiÛn de citas
-/api/clients         # GestiÛn de clientes
-/api/staff           # GestiÛn de personal
-/api/services        # GestiÛn de servicios
-/api/specialties     # GestiÛn de especialidades
-/api/reports         # Reportes y estadÌsticas
-/api/search          # B˙squeda global
-/health              # Health check
+### Desarrollo
+```bash
+npm run dev
 ```
 
-## ??? Funcionalidades de Seguridad
+### Producci√≥n
+```bash
+npm run build
+npm run preview
+```
 
-- ?? **AutenticaciÛn JWT**
-- ??? **AutorizaciÛn por roles**
-- ?? **ValidaciÛn de datos**
-- ?? **AuditorÌa de acciones**
-- ?? **Manejo de errores**
+### Supabase Edge Functions
+```bash
+# Desplegar funciones
+supabase functions deploy google-calendar-sync
+supabase functions deploy google-calendar-webhook
+```
 
-## ?? Estado del Proyecto
+## üì± Caracter√≠sticas de la Integraci√≥n
 
-### ? Completado
-- MigraciÛn y modularizaciÛn del backend
-- Dashboard con manejo robusto de errores
-- GestiÛn completa de entidades principales
-- Base de datos normalizada
-- Scripts de inicio automatizados
+### Para Clientes
+- Ver sus citas en Google Calendar
+- Crear eventos que se convierten en citas
+- Recibir recordatorios en todos sus dispositivos
+- Sincronizaci√≥n autom√°tica
 
-### ?? En Desarrollo
-- IntegraciÛn completa de Socket.IO
-- Sistema de notificaciones en tiempo real
-- MÛdulo de reportes avanzados
-- Tests unitarios y de integraciÛn
+### Para Personal
+- Ver agenda completa en Google Calendar
+- Actualizar citas desde cualquier dispositivo
+- Notificaciones push nativas
+- Integraci√≥n con otros calendarios
 
-### ?? Por Hacer
-- DocumentaciÛn API con Swagger
-- Sistema de respaldos autom·ticos
-- MÛdulo de facturaciÛn completo
-- App mÛvil (React Native)
+### Para Administradores
+- Control total de sincronizaci√≥n
+- Configuraci√≥n de conflictos
+- Logs detallados de operaciones
+- M√©tricas de uso de calendarios
 
-## ?? Contribuir
+## üîß Configuraci√≥n Avanzada
 
-1. Fork el proyecto
-2. Crea una rama para tu feature (`git checkout -b feature/AmazingFeature`)
-3. Commit tus cambios (`git commit -m 'Add some AmazingFeature'`)
-4. Push a la rama (`git push origin feature/AmazingFeature`)
-5. Abre un Pull Request
+### Intervalos de Sincronizaci√≥n
+- M√≠nimo: 5 minutos
+- M√°ximo: 24 horas
+- Recomendado: 15 minutos
 
-## ?? Licencia
+### Ventana de Sincronizaci√≥n
+- Configurable de 7 a 365 d√≠as
+- Por defecto: 30 d√≠as hacia adelante y atr√°s
 
-Este proyecto est· bajo la Licencia MIT - ver el archivo [LICENSE](LICENSE) para m·s detalles.
+### Tipos de Eventos Sincronizados
+- Citas m√©dicas
+- Consultas
+- Terapias
+- Evaluaciones
+- Eventos personalizados
 
-## ?? Autores
+## üìû Soporte
 
-- **Tu Nombre** - *Desarrollo inicial* - [TuGitHub](https://github.com/tu-usuario)
+Para soporte t√©cnico o preguntas sobre la integraci√≥n:
+- Email: soporte@citaly.com
+- Documentaci√≥n: [docs.citaly.com](https://docs.citaly.com)
+- Issues: GitHub Issues
 
-## ?? Soporte
+## üìÑ Licencia
 
-Si encuentras alg˙n problema o tienes preguntas:
-
-1. Revisa la [documentaciÛn de correcciones](DASHBOARD-FIX-README.md)
-2. Abre un [issue](https://github.com/tu-usuario/citaly-dashboard/issues)
-3. Contacta al equipo de desarrollo
-
-## ?? DocumentaciÛn Adicional
-
-- [GuÌa de Correcciones del Dashboard](DASHBOARD-FIX-README.md)
-- [Esquema de Base de Datos](app-citaly/db/sql.sql)
-- [ConfiguraciÛn del API](app-citaly/api-gateway/README.md)
-
----
-
-? **°Dale una estrella si este proyecto te fue ˙til!** ?
-=======
-# Citaly
->>>>>>> 01e59ff0baa956870ef17b3a387cf57560d0fbf7
+MIT License - Ver archivo LICENSE para m√°s detalles.
