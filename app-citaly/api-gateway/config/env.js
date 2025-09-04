@@ -1,6 +1,6 @@
 require('dotenv').config();
 
-// Establecer la zona horaria para toda la aplicación
+// Establecer la zona horaria para toda la aplicaciï¿½n
 process.env.TZ = process.env.TIMEZONE || 'America/Bogota';
 
 const config = {
@@ -21,6 +21,11 @@ const config = {
   // JWT (para futuras implementaciones)
   JWT_SECRET: process.env.JWT_SECRET || 'your-secret-key',
   JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN || '24h',
+
+  // Google Calendar API
+  GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID || '',
+  GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET || '',
+  GOOGLE_REDIRECT_URI: process.env.GOOGLE_REDIRECT_URI || 'http://localhost:5173/auth/google/callback',
 
   // Empresa por defecto
   DEFAULT_COMPANY_ID: process.env.DEFAULT_COMPANY_ID || 1,

@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
-import { Calendar as CalendarIcon, TrendingUp, Loader2, RefreshCw, DollarSign, AlertCircle, Filter } from "lucide-react";
+import { Calendar as CalendarIcon, TrendingUp, Loader2, RefreshCw, DollarSign, AlertCircle, Filter, ExternalLink } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import StatsCards from "./StatsCards";
 import { apiService } from "../config/api-v2";
@@ -14,6 +14,7 @@ import { es } from "date-fns/locale";
 import { DateRange } from "react-day-picker";
 import { toast } from "sonner";
 import { useSocket } from "../hooks/useSocket";
+import { useNavigate } from "react-router-dom";
 
 // Interfaces mejoradas y completas
 interface Appointment {
@@ -95,6 +96,8 @@ interface DashboardStats {
 }
 
 const DashboardContent = () => {
+  const navigate = useNavigate();
+  
   // Estados principales
   const [upcomingAppointments, setUpcomingAppointments] = useState<Appointment[]>([]);
   const [popularServices, setPopularServices] = useState<PopularService[]>([]);
@@ -237,6 +240,52 @@ const DashboardContent = () => {
 
       <div className="mb-4" />
       <StatsCards />
+
+      {/* Sección de Google Calendar Integration */}
+      <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-blue-900">
+            <ExternalLink className="h-5 w-5" />
+            Integración con Google Calendar
+          </CardTitle>
+          <CardDescription className="text-blue-700">
+            Sincroniza tus citas automáticamente con Google Calendar
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+            <div className="space-y-2">
+              <p className="text-sm text-blue-800">
+                Mantén todas tus citas organizadas y sincronizadas en tu calendario de Google
+              </p>
+              <div className="flex gap-2 text-xs text-blue-600">
+                <span>✓ Sincronización automática</span>
+                <span>✓ Notificaciones</span>
+                <span>✓ Acceso desde cualquier dispositivo</span>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => navigate('/calendar')}
+                className="border-blue-300 text-blue-700 hover:bg-blue-100"
+              >
+                <CalendarIcon className="h-4 w-4 mr-1" />
+                Ver Calendario
+              </Button>
+              <Button 
+                size="sm"
+                onClick={() => navigate('/google-calendar')}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                <ExternalLink className="h-4 w-4 mr-1" />
+                Configurar Google Calendar
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Mostrar próximas citas */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

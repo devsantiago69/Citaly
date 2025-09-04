@@ -1,4 +1,4 @@
-import { Calendar, Home, Clock, Settings, Users, UserCheck, BarChart3, Cog, Bell, Menu, X, User, CreditCard, LogOut, Building, Palette, Shield, Award } from "lucide-react";
+import { Calendar, Home, Clock, Settings, Users, UserCheck, BarChart3, Cog, Bell, Menu, X, User, CreditCard, LogOut, Building, Palette, Shield, Award, ExternalLink } from "lucide-react";
 import { cn } from "../lib/utils";
 import { useState } from "react";
 import { Button } from "../components/ui/button";
@@ -13,6 +13,7 @@ const Sidebar = () => {
   const menuItems = [
     { id: "dashboard", label: "Dashboard", icon: Home, path: "/" },
     { id: "calendar", label: "Calendario", icon: Calendar, path: "/calendar" },
+    { id: "google-calendar", label: "Google Calendar", icon: ExternalLink, path: "/google-calendar" },
     { id: "appointments", label: "Citas", icon: Clock, path: "/appointments" },
     { id: "services", label: "Servicios", icon: Settings, path: "/services" },
     { id: "categories", label: "Categor�as", icon: Palette, path: "/categories" },

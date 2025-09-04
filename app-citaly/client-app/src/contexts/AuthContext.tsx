@@ -1,6 +1,6 @@
 import React, { createContext, useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
-import api from '../lib/api';
+import { authAPI } from '../lib/api-client';
 import { toast } from 'sonner';
 
 // Tipo temporal para Socket - se integrará después
@@ -79,7 +79,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const verifyAuth = useCallback(async () => {
     console.log("?? Verificando autenticación...");
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('authToken'); // Cambiado a authToken
     console.log("?? Token encontrado:", !!token);
 
     if (token) {
@@ -96,7 +96,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             // Luego verificar con el backend asíncronamente
             try {
               console.log("?? Verificando token con el backend...");
-              const response = await api.get('/auth/verify');
+              const response = await authAPI.verifyToken(); // Usar nuestro authAPI
               // Si la solicitud es exitosa, el token es válido y actualizamos con los datos más recientes
               console.log("? Token verificado exitosamente", response.data);
 
@@ -142,7 +142,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           console.log("?? Token encontrado pero no hay datos de usuario");
           // Intentar verificar token sin datos de localStorage
           try {
-            const response = await api.get('/auth/verify');
+            const response = await authAPI.verifyToken(); // Usar nuestro authAPI
             if (response.data && response.data.user) {
               console.log("? Token verificado sin datos locales, actualizando usuario");
               setUser(response.data.user);
@@ -178,29 +178,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async (email: string, password: string): Promise<boolean> => {
     setIsLoading(true);
-    console.log(`?? Intentando login con ${email}`);
+    console.log(`🔍 Intentando login con ${email}`);
 
     try {
-      // Usamos axios directamente para evitar interceptores en la autenticación inicial
-      const response = await axios.post('http://localhost:3001/api/auth/login',
-        { email, password },
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-          }
-        }
-      );
+      // Usar nuestro authAPI
+      const response = await authAPI.login(email, password);
 
-      console.log('?? Respuesta del servidor:', response.status);
+      console.log('✅ Respuesta del servidor recibida');
 
-      if (response.data && response.data.user && response.data.token) {
-        console.log('? Login exitoso');
-        const { user: userData, token } = response.data;
+      if (response && response.user && response.token) {
+        console.log('✅ Login exitoso');
+        const { user: userData, token } = response;
 
         // Validar que el usuario tiene los campos necesarios
-        if (!userData.name || !userData.email || !userData.role) {
-          console.error('? Datos de usuario incompletos:', userData);
+        if (!userData.name || !userData.email) {
+          console.error('❌ Datos de usuario incompletos:', userData);
           toast.error('Error en la respuesta del servidor: datos de usuario incompletos');
           setIsLoading(false);
           return false;
@@ -208,13 +200,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         // Guardar datos en localStorage primero para asegurar persistencia
         localStorage.setItem('user', JSON.stringify(userData));
-        localStorage.setItem('token', token);
+        localStorage.setItem('authToken', token); // Cambiado a authToken
 
         // Luego actualizar el estado
         setUser(userData);
         initializeSocket(userData);
 
-        console.log('? Usuario autenticado correctamente:', userData.name);
+        console.log('✅ Usuario autenticado correctamente:', userData.name);
         setIsLoading(false);
         return true;
       } else {
@@ -260,12 +252,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // Limpiamos los datos locales
     localStorage.removeItem('user');
-    localStorage.removeItem('token');
+    localStorage.removeItem('authToken'); // Cambiado a authToken
     setUser(null);
 
-    // Intentamos hacer logout en el backend, pero no esperamos la respuesta
-    // para no bloquear la redirección
-    axios.post('http://localhost:3001/api/logout')
+    // Intentamos hacer logout en el backend usando authAPI
+    authAPI.logout()
       .then(() => {
         console.log("Logout exitoso en el backend");
       })

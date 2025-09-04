@@ -9,7 +9,7 @@ const login = async (req, res) => {
 
   if (!email || !password) {
     logger.warn('Intento de login sin email o password');
-    return res.status(400).json({ error: 'Email y contraseña son requeridos' });
+    return res.status(400).json({ error: 'Email y contraseï¿½a son requeridos' });
   }
 
   try {
@@ -17,18 +17,18 @@ const login = async (req, res) => {
 
     if (rows.length === 0) {
       logger.warn(`Usuario no encontrado en la base de datos: ${email}`);
-      return res.status(401).json({ error: 'Credenciales inválidas' });
+      return res.status(401).json({ error: 'Credenciales invï¿½lidas' });
     }
 
     const user = rows[0];
     logger.info(`Usuario encontrado: ${user.nombre} (ID: ${user.id}, Empresa: ${user.empresa_id})`);
 
-    // Comparar contraseñas
+    // Comparar contraseï¿½as
     const isMatch = await bcrypt.compare(password, user.contrasena);
 
     if (!isMatch) {
-      logger.warn(`Contraseña incorrecta para usuario: ${email}`);
-      return res.status(401).json({ error: 'Credenciales inválidas' });
+      logger.warn(`Contraseï¿½a incorrecta para usuario: ${email}`);
+      return res.status(401).json({ error: 'Credenciales invï¿½lidas' });
     }
 
     logger.info(`Login exitoso para usuario: ${email}`);
@@ -51,7 +51,7 @@ const login = async (req, res) => {
         id: user.id,
         name: user.nombre,
         email: user.correo_electronico,
-        role: user.tipo_usuario_id, // Ajustar según los roles que uses
+        role: user.tipo_usuario_id, // Ajustar segï¿½n los roles que uses
         company: {
           id: company?.id,
           name: company?.nombre,
@@ -74,15 +74,15 @@ const login = async (req, res) => {
 
 const verifyToken = async (req, res) => {
   try {
-    // El middleware verifyToken ya ha validado el token y ha puesto la información del usuario en req.user
+    // El middleware verifyToken ya ha validado el token y ha puesto la informaciï¿½n del usuario en req.user
     const { id, empresa_id } = req.user;
 
-    // Validar que tenemos los parámetros necesarios
+    // Validar que tenemos los parï¿½metros necesarios
     if (!id || !empresa_id) {
-      return res.status(400).json({ error: 'Token inválido: faltan datos de usuario' });
+      return res.status(400).json({ error: 'Token invï¿½lido: faltan datos de usuario' });
     }
 
-    // Obtener información actualizada del usuario
+    // Obtener informaciï¿½n actualizada del usuario
     const [rows] = await db.execute('SELECT * FROM usuarios WHERE id = ? AND empresa_id = ?', [id, empresa_id]);
 
     if (rows.length === 0) {
@@ -96,7 +96,7 @@ const verifyToken = async (req, res) => {
     const company = companyRows.length > 0 ? companyRows[0] : null;
 
     res.json({
-      message: 'Token válido',
+      message: 'Token vï¿½lido',
       user: {
         id: user.id,
         name: user.nombre,
@@ -116,9 +116,56 @@ const verifyToken = async (req, res) => {
       }
     });
   } catch (error) {
-    logger.error('Error en verificación de token:', error);
+    logger.error('Error en verificaciï¿½n de token:', error);
     res.status(500).json({ error: 'Error interno del servidor' });
   }
 };
 
-module.exports = { login, verifyToken };
+const getProfile = async (req, res) => {
+  try {
+    // El middleware verifyToken ya ha validado el token y ha puesto la informaciÃ³n del usuario en req.user
+    const { id, empresa_id } = req.user;
+
+    // Validar que tenemos los parÃ¡metros necesarios
+    if (!id || !empresa_id) {
+      return res.status(400).json({ error: 'Token invÃ¡lido: faltan datos de usuario' });
+    }
+
+    // Obtener informaciÃ³n actualizada del usuario
+    const [rows] = await db.execute('SELECT * FROM usuarios WHERE id = ? AND empresa_id = ?', [id, empresa_id]);
+
+    if (rows.length === 0) {
+      return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
+
+    const user = rows[0];
+
+    // Obtener datos de la empresa
+    const [companyRows] = await db.execute('SELECT * FROM empresas WHERE id = ?', [empresa_id]);
+    const company = companyRows.length > 0 ? companyRows[0] : null;
+
+    res.json({
+      id: user.id,
+      name: user.nombre,
+      email: user.correo_electronico,
+      role: user.tipo_usuario_id,
+      empresa_id: user.empresa_id,
+      company: {
+        id: company?.id,
+        name: company?.nombre,
+        nit: company?.nit,
+        address: company?.direccion,
+        phone: company?.telefono,
+        email: company?.correo_electronico,
+        description: company?.descripcion,
+        website: company?.sitio_web,
+        industry: company?.industria
+      }
+    });
+  } catch (error) {
+    logger.error('Error obteniendo perfil:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+};
+
+module.exports = { login, verifyToken, getProfile };

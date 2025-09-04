@@ -23,6 +23,7 @@ const clientesRoutes = require('./routes/clientes.routes');
 const personalRoutes = require('./routes/personal.routes');
 const facturacionRoutes = require('./routes/facturacion.routes');
 const categoriasRoutes = require('./routes/categorias.routes');
+const googleCalendarRoutes = require('./routes/google-calendar.routes');
 // const serviciosNewRoutes = require('./routes/servicios-new.routes');
 const appointmentsRoutes = require('./routes/appointments.routes');
 
@@ -148,6 +149,9 @@ app.use('/api/personal', personalRoutes);
 
 // Rutas de categorías de servicios
 app.use('/api/categorias', categoriasRoutes);
+
+// Rutas de Google Calendar Integration
+app.use('/api/google-calendar', googleCalendarRoutes);
 
 // Rutas de facturación y suscripciones
 app.use('/api/facturacion', facturacionRoutes);

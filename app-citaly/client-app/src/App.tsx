@@ -12,6 +12,9 @@ import CategoryManagement from "./components/CategoryManagement";
 import SpecialtiesPage from "./pages/SpecialtiesPage";
 import ServiceManagement from "./components/ServiceManagement";
 import AppointmentCalendar from "./components/AppointmentCalendar";
+import CalendarPage from "./pages/CalendarPage";
+import GoogleCalendarIntegrationUI from "./components/GoogleCalendarIntegrationUI";
+import GoogleCalendarAuth from "./components/GoogleCalendarAuth";
 import AppointmentsDataTable from "./components/AppointmentsDataTable";
 import UserManagement from "./components/UserManagement";
 import StaffManagement from "./components/StaffManagement";
@@ -40,10 +43,12 @@ const App = () => {
           <BrowserRouter>
             <Routes>
               <Route path="/login" element={<LoginForm />} />
+              <Route path="/auth/google/callback" element={<GoogleCalendarAuth />} />
               <Route path="/" element={<ProtectedRoute />}>
                 <Route path="/" element={<MainLayout />}>
                   <Route index element={<Index />} />
-                  <Route path="calendar" element={<AppointmentCalendar />} />
+                  <Route path="calendar" element={<CalendarPage />} />
+                  <Route path="google-calendar" element={<GoogleCalendarIntegrationUI />} />
                   <Route path="appointments" element={<AppointmentsDataTable />} />
                   <Route path="services" element={<ServiceManagement />} />
                   <Route path="categories" element={<CategoryManagement />} />
