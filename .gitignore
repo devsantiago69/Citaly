@@ -257,3 +257,4 @@ package-lock.json
 .svelte-kit
 
 # End of https://www.gitignore.io/api/node
+.env
