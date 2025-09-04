@@ -617,14 +617,14 @@ CREATE TABLE permisos_modulo (
 
 CREATE TABLE medios_pago (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    nombre VARCHAR(100) NOT NULL UNIQUE COMMENT 'Nombre del medio de pago (ej: Efectivo, Nequi, Tarjeta de Crédito)',
-    tipo ENUM('Digital', 'Fisico', 'Tarjeta', 'Transferencia', 'Billetera Digital') NOT NULL COMMENT 'Categoría del medio de pago',
-    activo BOOLEAN DEFAULT TRUE COMMENT 'Indica si el medio de pago está activo para su uso',
+    nombre VARCHAR(100) NOT NULL UNIQUE COMMENT 'Nombre del medio de pago (ej: Efectivo, Nequi, Tarjeta de Crï¿½dito)',
+    tipo ENUM('Digital', 'Fisico', 'Tarjeta', 'Transferencia', 'Billetera Digital') NOT NULL COMMENT 'Categorï¿½a del medio de pago',
+    activo BOOLEAN DEFAULT TRUE COMMENT 'Indica si el medio de pago estï¿½ activo para su uso',
     descripcion TEXT NULL,
     fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     fecha_actualizacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    creado_por BIGINT NULL COMMENT 'Referencia al usuario o super_admin que creó el medio de pago',
-    actualizado_por BIGINT NULL COMMENT 'Referencia al usuario o super_admin que actualizó el medio de pago'
+    creado_por BIGINT NULL COMMENT 'Referencia al usuario o super_admin que creï¿½ el medio de pago',
+    actualizado_por BIGINT NULL COMMENT 'Referencia al usuario o super_admin que actualizï¿½ el medio de pago'
 );
 ---Datos actuales de la base de datos:
 -- Desactiva las comprobaciones de claves forÃ¡neas para permitir la carga de datos en cualquier orden y evitar errores de dependencia temporal
@@ -892,10 +892,10 @@ INSERT INTO suscripciones (id, empresa_id, plan_id, fecha_inicio, fecha_fin, est
 (4, 1, 4, '2024-12-01', '2025-12-01', 'Expirada', NULL, FALSE, 1); -- Centro MÃ©dico - Plan Gratuito (ejemplo de expirado)
 
 -- ########## 21. Facturas ##########
-INSERT INTO facturas (id, empresa_id, sucursal_id, suscripcion_id, numero_factura, monto, monto_impuestos, estado, fecha_vencimiento, fecha_pago, metodo_pago, referencia_pago, revisado_por_admin, creado_por) VALUES
-(1, 1, NULL, 1, 'INV-2024-001', 79.99, 15.20, 'Pagada', '2024-01-10', '2024-01-05 10:30:00', 'Tarjeta de CrÃ©dito', 'PAY12345', TRUE, 1),
-(2, 2, NULL, 2, 'INV-2024-002', 79.99, 15.20, 'Pagada', '2024-03-25', '2024-03-20 11:00:00', 'Transferencia Bancaria', 'TRN98765', TRUE, 7),
-(3, 3, NULL, 3, 'INV-2024-003', 199.99, 38.00, 'Pagada', '2025-05-10', '2024-05-01 09:00:00', 'DÃ©bito AutomÃ¡tico', 'DBT54321', TRUE, 11),
+INSERT INTO facturas (id, empresa_id, sucursal_id, suscripcion_id, numero_factura, monto, monto_impuestos, estado, fecha_vencimiento, fecha_pago, medio_pago_id, referencia_pago, revisado_por_admin, creado_por) VALUES
+(1, 1, NULL, 1, 'INV-2024-001', 79.99, 15.20, 'Pagada', '2024-01-10', '2024-01-05 10:30:00', 1, 'PAY12345', TRUE, 1),
+(2, 2, NULL, 2, 'INV-2024-002', 79.99, 15.20, 'Pagada', '2024-03-25', '2024-03-20 11:00:00', 2, 'TRN98765', TRUE, 7),
+(3, 3, NULL, 3, 'INV-2024-003', 199.99, 38.00, 'Pagada', '2025-05-10', '2024-05-01 09:00:00', 3, 'DBT54321', TRUE, 11),
 (4, 1, NULL, 1, 'INV-2025-001', 79.99, 15.20, 'No_pagada', '2025-01-10', NULL, NULL, NULL, FALSE, 1);
 
 -- ########## 22. Especialidades ##########
@@ -1065,13 +1065,13 @@ INSERT INTO permisos_modulo (modulo_id, tipo_usuario_id, habilitado, creado_por)
 
 INSERT INTO medios_pago (id, nombre, tipo, activo, creado_por) VALUES
 (1, 'Efectivo', 'Fisico', TRUE, 1),
-(2, 'Tarjeta de Crédito', 'Tarjeta', TRUE, 1),
-(3, 'Tarjeta de Débito', 'Tarjeta', TRUE, 1),
+(2, 'Tarjeta de Credito', 'Tarjeta', TRUE, 1),
+(3, 'Tarjeta de Debito', 'Tarjeta', TRUE, 1),
 (4, 'Nequi', 'Billetera Digital', TRUE, 1),
 (5, 'DaviPlata', 'Billetera Digital', TRUE, 1),
 (6, 'PSE', 'Transferencia', TRUE, 1),
 (7, 'Transferencia Bancaria', 'Transferencia', TRUE, 1),
 (8, 'Bono de Regalo', 'Fisico', TRUE, 1),
-(9, 'Crédito Interno', 'Digital', TRUE, 1);
+(9, 'Credito Interno', 'Digital', TRUE, 1);
 -- Reactiva las comprobaciones de claves forÃ¡neas
 SET FOREIGN_KEY_CHECKS = 1;

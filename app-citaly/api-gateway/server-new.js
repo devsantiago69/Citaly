@@ -22,6 +22,7 @@ const cajasRoutes = require('./routes/cajas.routes');
 const clientesRoutes = require('./routes/clientes.routes');
 const personalRoutes = require('./routes/personal.routes');
 const facturacionRoutes = require('./routes/facturacion.routes');
+const categoriasRoutes = require('./routes/categorias.routes');
 // const serviciosNewRoutes = require('./routes/servicios-new.routes');
 const appointmentsRoutes = require('./routes/appointments.routes');
 
@@ -52,7 +53,6 @@ app.use((req, res, next) => {
   next();
 });
 
-// ...existing code...
 // Rutas de facturación (nuevo sistema)
 app.use('/api/billing', billingRoutes);
 
@@ -145,6 +145,9 @@ app.use('/api/clientes', clientesRoutes);
 
 // Rutas de personal (nueva estructura)
 app.use('/api/personal', personalRoutes);
+
+// Rutas de categorías de servicios
+app.use('/api/categorias', categoriasRoutes);
 
 // Rutas de facturación y suscripciones
 app.use('/api/facturacion', facturacionRoutes);

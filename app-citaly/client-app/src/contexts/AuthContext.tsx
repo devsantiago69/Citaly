@@ -16,6 +16,7 @@ interface User {
   email: string;
   name: string;
   role: 'admin' | 'staff' | 'client';
+  empresa_id: number;
   company?: {
     name: string;
     nit: string;

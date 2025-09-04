@@ -10,11 +10,12 @@ const pool = mysql.createPool({
   database: process.env.DB_NAME || 'citaly',
   waitForConnections: true,
   connectionLimit: 10,
-  acquireTimeout: 60000, // Tiempo máximo de espera para adquirir una conexión (válido en mysql2)
-  // timeout y reconnect no son válidos para mysql2/promise, no incluirlos
+  queueLimit: 0,
+  // acquireTimeout no es válido para mysql2/promise
+  // timeout y reconnect tampoco son válidos para mysql2/promise
 });
 
-// Verificar la conexión
+// Verificar la conexión (sin detener el servidor si falla)
 (async () => {
   try {
     const connection = await pool.getConnection();
@@ -22,7 +23,8 @@ const pool = mysql.createPool({
     connection.release();
   } catch (err) {
     logger.error('Error al conectar con la base de datos:', err);
-    process.exit(1);
+    logger.warn('El servidor continuará funcionando sin conexión a la base de datos');
+    // No hacer process.exit(1) para permitir probar las rutas
   }
 })();
 

@@ -8,6 +8,9 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
     port: 8080,
+    proxy: {
+      '/api': 'http://localhost:3001'
+    }
   },
   plugins: [
     react(),
@@ -25,5 +28,5 @@ export default defineConfig(({ mode }) => ({
       "pages": path.resolve(__dirname, "./pages"),
     },
   },
-  root: './', // Define la raíz del proyecto como la ubicación actual
+  root: './', // Define la raï¿½z del proyecto como la ubicaciï¿½n actual
 }));

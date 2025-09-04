@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useContext } from "react";
+import { AuthContext } from "../contexts/AuthContext";
 import { PlusIcon, Pencil, Trash, Loader2, Search, X } from "lucide-react";
 import {
   Card,
@@ -28,6 +29,7 @@ interface ServiceCategory {
 type NewCategory = Omit<ServiceCategory, "id">;
 
 const CategoryManagement = () => {
+  const { user } = useContext(AuthContext) || {};
   const { toast } = useToast();
   const [categories, setCategories] = useState<ServiceCategory[]>([]);
   const [filteredCategories, setFilteredCategories] = useState<ServiceCategory[]>([]);
@@ -70,7 +72,8 @@ const CategoryManagement = () => {
   const fetchCategories = async () => {
     console.log('🔍 Fetching categories...');
     try {
-      const response = await fetch('/api/service-categories');
+      const empresa_id = user?.empresa_id || 1;
+      const response = await fetch(`/api/service-categories?empresa_id=${empresa_id}`);
       console.log('📥 Response status:', response.status);
       console.log('📥 Response headers:', {
         'Content-Type': response.headers.get('Content-Type'),
